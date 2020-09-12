@@ -29,6 +29,14 @@ then cDNA is generated from the RNA. Both gDNA and cDNA are amplified with
 locus-specific PCR primers, in multiple replicates, and libraries of the
 experimental replicates are prepared for next-generation sequencing.
 
+## rgenie installation
+
+You can install rgenie using devtools.
+
+```{r install, message=FALSE}
+devtools::install_github(repo = "jeremy37/rgenie")
+```
+
 ## rgenie setup
 
 An rgenie analysis is run for a given **region**, which must have multiple
@@ -251,12 +259,20 @@ The best way to explore your GenIE experiment is using the available plots.
 
 ### Deletion summary plot
 
-The below plot summarizes the overall statistics for the region, and values for each replicate. (When there are many replicates the data may not fit, in which case you should manually look at the result$replicate_stats table)
+The below plot summarizes the overall statistics for the region, and values for each replicate.
 
 ```{r fig.width=7, fig.height=6}
 rgenie::deletion_summary_plot(del_result)
 del_result$replicate_stats
 ```
+
+When there are many replicates the data may not fit, in which case you should manually look at the `result$replicate_stats` table.
+
+```{r}
+del_result$replicate_stats
+```
+
+
 ### Deletion alleles plot
 
 ```{r fig.width=7, fig.height=6}
@@ -358,6 +374,7 @@ flash -z --allow-outies -o rep1 -r 150 -f 250 -s 20 -m 4 -x 0.15 fastq/R1.fastq.
 bwa mem -t 2 -O 24,48 -E 1 -A 4 -B 16 -T 70 -k 19 -w 200 -d 600 -L 20 -U 40 amplicons.fa rep1.extendedFrags.fastq.gz | samtools view -b - > gDNA_rep1.bam
 ```
 
+If stitching reads with FLASH, the `--allow-outies` parameter is essential, since Cas9-induced deletions may cause the amplified allele length to be less than the read length.
 
 ## Other documentation
 
