@@ -17,6 +17,7 @@ URL: http://github.com/jeremy37/rgenie
 BugReports: https://github.com/jeremy37/rgenie/issues
 Encoding: UTF-8
 LazyData: true
+biocViews:
 Imports:
     cowplot (>= 0.9.4),
     egg (>= 0.4.2),
@@ -24,9 +25,9 @@ Imports:
     ggdendro (>= 0.1-20),
     tidyverse (>= 1.2.1),
     stringr (>= 1.4.0),
-    variancePartition (>= 1.14.0),
     ggdendro (>= 0.1-20),
     gridExtra (>= 2.3),
+    variancePartition (>= 1.14.0),
     Rsamtools (>= 2.0.0),
     IRanges (>= 2.18.1)
 Suggests: 
