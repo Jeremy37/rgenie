@@ -229,9 +229,9 @@ region_grep_analysis = function(region, replicates, opts)
 
   replicate_grep_analyses = list()
   for (i in 1:nrow(replicates)) {
-    bam_file = replicates[i,]$bam
-    replicate = replicates[i,]$replicate
-    type = replicates[i,]$type
+    bam_file = replicates$bam[i]
+    replicate = replicates$replicate[i]
+    type = replicates$type[i]
     hdr_profile = str_to_upper(region$hdr_allele_profile)
     wt_profile = str_to_upper(region$wt_allele_profile)
     ref_sequence = str_to_upper(region$ref_sequence)
@@ -463,9 +463,9 @@ region_del_analysis = function(region, replicates, opts) {
 
   replicate_del_analyses = list()
   for (i in 1:nrow(replicates)) {
-    bam_file = replicates[i,]$bam
-    replicate = replicates[i,]$replicate
-    type = replicates[i,]$type
+    bam_file = replicates$bam[i]
+    replicate = replicates$replicate[i]
+    type = replicates$type[i]
 
     output(opts, sprintf("\n\nAnalysing region %s, replicate %s, file %s\n", region$name, replicate, bam_file, region$sequence_name))
     output(opts, sprintf("HDR allele: %s\n", hdr_profile))
@@ -1001,7 +1001,7 @@ replicate_qc_metrics = function(replicates, replicate_alleles, max_alleles = 20,
     stats_scaled[, "avg_udp_deviation_from_gDNA"] = sapply(stats_scaled[, "avg_udp_deviation_from_gDNA"], function(x) max(0, x))
     stats_nn <- FNN::get.knn(stats_scaled, k = max(2, floor(n_cDNA / 2)))
     stats_nnd <- rowMeans(stats_nn$nn.dist)
-    replicate_qc[replicate_qc$type == "cDNA",]$outlier_score_knn = stats_nnd
+    replicate_qc$outlier_score_knn[replicate_qc$type == "cDNA"] = stats_nnd
   }
   if (n_gDNA >= 4 && !any(is.na(replicate_qc$avg_udp_deviation))) {
     stats.gDNA.df = replicate_qc %>%
@@ -1013,7 +1013,7 @@ replicate_qc_metrics = function(replicates, replicate_alleles, max_alleles = 20,
     stats_scaled[, "avg_udp_deviation_from_gDNA"] = sapply(stats_scaled[, "avg_udp_deviation_from_gDNA"], function(x) max(0, x))
     stats_nn <- FNN::get.knn(stats_scaled, k = max(2, floor(n_gDNA / 2)))
     stats_nnd <- rowMeans(stats_nn$nn.dist)
-    replicate_qc[replicate_qc$type == "gDNA",]$outlier_score_knn = stats_nnd
+    replicate_qc$outlier_score_knn[replicate_qc$type == "gDNA"] = stats_nnd
   }
 
   return( list(replicate_qc = replicate_qc,
