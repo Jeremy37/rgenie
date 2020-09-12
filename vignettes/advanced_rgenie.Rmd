@@ -1,0 +1,25 @@
+---
+title: "Advanced rgenie"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{advanced_rgenie}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+This vignette describes some of the more advanced parameters and functions of the rgenie package.
+
+## To be described
+
+
+```{r setup, message=FALSE}
+library(rgenie)
+```
+

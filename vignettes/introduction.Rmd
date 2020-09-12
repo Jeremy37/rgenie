@@ -1,0 +1,365 @@
+---
+title: "rgenie Introduction"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{rgenie Introduction}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+rgenie is a package to analyze the next-generation sequencing output from a
+set of GenIE experimental replicates.
+
+## What is GenIE?
+
+GenIE (genome-editing interrogation of enhancers) is an experimental method
+to evaluate the effects of individual SNPs on gene transcription. It is based
+on targeted CRISPR-Cas9 genome editing in cultured cells to produce indels at
+a target locus, optionally with a homology-dependent recombination (HDR)
+construct to create precisely defined genomic changes. Following this, both
+genomic DNA (gDNA) and RNA are extracted from the same pool of cells, and
+then cDNA is generated from the RNA. Both gDNA and cDNA are amplified with
+locus-specific PCR primers, in multiple replicates, and libraries of the
+experimental replicates are prepared for next-generation sequencing.
+
+## rgenie setup
+
+An rgenie analysis is run for a given **region**, which must have multiple
+**replicates** for both cDNA and gDNA. Before using rgenie, the sequencing
+data from each replicate should be aligned to either the full reference genome
+or to a locus-specific (amplicon) reference genome for analysis by rgenie. More
+details on recommended alignment methods are at the end of the vignette, but
+for now we will start with an already-aligned example.
+
+Some example data can be downloaded with a function provided in rgenie. This
+shows how to get data from a GenIE experiment targeting rs6700034, which is a 5' UTR SNP in gene
+MUL1. It downloads 8 replicates for cDNA and 4 replicates for gDNA - about
+57 Mb in a total of 24 files (12 ".bam" files and 12 ".bam.bai" files).
+
+```{r download_example, message=FALSE}
+library(rgenie)
+library(tidyverse, quietly = T) # Not required, but we use it below
+#download_example(dir = "~/genie_example", name = "MUL1")
+```
+
+These files have been aligned to a custom amplicon reference sequence, which corresponds to the region chr1:20507983-20508157 (GRCh38).
+
+## rgenie regions
+
+The example includes tab-separated text files defining the genie regions and
+replicates. We first load the region details into a data.frame.
+
+```{r regions}
+regions = readr::read_tsv("~/genie_example/MUL1/mul1.genie_regions.tsv")
+print(regions)
+```
+
+There are 9 required fields defining a region.
+
+| Field | Description |
+|:------|:--------------------|
+| name |  A user-defined name given to the region. |
+| sequence_name | The chromosome or amplicon name to use in retrieving reads from the replicate BAM files. |
+| start | The start coordinate of the region of interest within the sequence defined by sequence_name. |
+| end | The end coordinate of the region of interest within the sequence defined by sequence_name. This position is included in the region. |
+| highlight_site | A site of interest to highlight in output, usually the targeted SNP position. This mainly affects plots, but also which deletions are included in some statistics. |
+| cut_site | The position where Cas9 is expected to cut DNA. (More specifically, where Cas9 cuts between two nucleotides, this is the left nucleotide position.) |
+| wt_allele_profile | A string that defines the nucleotides that must match to consider a sequence as wilde-type, defined further below. |
+| hdr_allele_profile | A string that defines the nucleotides that must match to consider a sequence as HDR. This may be left blank if no HDR construct was used. |
+| ref_sequence | The sequence of the amplicon region. This must have length (end - start + 1). |
+
+Let's take a look at the WT and HDR allele profiles, which define how to identify sequencing reads that are wild-type or HDR, as well as the `ref_sequence`.
+
+```{r}
+print(regions$wt_allele_profile)
+print(regions$hdr_allele_profile)
+print(regions$ref_sequence)
+```
+
+The allele profile must have length equal to the reference sequence, i.e. the full amplicon region. Positions which do not need to match are specified with "-". Positions that must match a particular nucleotide should be specified as upper-case A, C, G, or T.
+
+In this case, only a single position has a nucleotide specified, which is the SNP rs6700034 in MUL1. This is at position 135 in the amplicon sequence, which is the `highlight_site` in the region definition above. This SNP has a reference allele of C in human GRCh38, and alt allele of A. The cell line that we used for the experiment is homozygous for the ref allele C, and so here we specify C at the SNP position in `wt_allele_profile` and A in `hdr_allele_profile`. (If our cell line were homozygous for the alt allele, we would use that allele as the WT allele, since it represents the unedited allele.)
+
+Note that when a particular SNP is targeted, you only need to specify that single SNP allele, because other parameters in the analysis determine a region around the specified sites that must also match.
+
+
+## rgenie replicates
+
+The replicates table for the MUL1 experiment defines 8 cDNA replicates and 4 gDNA replicates.
+
+```{r replicates}
+replicates = readr::read_tsv("~/genie_example/MUL1/mul1.genie_replicates.tsv")
+print(replicates)
+```
+
+| Field | Description |
+|:------|:--------------------|
+| name |  The name given to the region, which must match that in the regions table. |
+| replicate | A unique name for the replicate. This will appear in plots, so should be kept quite short. |
+| type | Either 'cDNA' or 'gDNA'. |
+| bam | The path to an aligned bam file for the replicate data. |
+
+The paths to BAM files can either be absolute paths or relative to the working directory.
+
+
+## Grep analysis
+
+The simplest type of rgenie analysis is a grep analysis, which just matches HDR and WT reads using grep (pattern matching). You could do an equivalent analysis by manually running unix `grep` on your fastq sequence files, and implementing the appropriate statistical test e.g. in a spreadsheet. Note that although this function requires aligned BAMs as input, since it extracts reads from the relevant region, it does not use the alignment information beyond this.
+
+The `grep_analysis` function requires the `regions` and `replicates` tables as input. We can specify some additional parameters for the analysis, which we have given here as the default values (except for quiet = TRUE).
+
+```{r grep_example, message=FALSE}
+setwd("~/genie_example/MUL1/")
+grep_results = grep_analysis(regions,
+                             replicates,
+                             required_match_left = 10,
+                             required_match_right = 10,
+                             min_mapq = 0,
+                             quiet = T)
+```
+
+`grep_analysis` returns a list with one item for each region analysed. We have given a single region in the `regions` input, but it is possible to run the grep_analysis for multiple regions, which are specified as rows in the regions table.
+
+```{r}
+length(grep_results)
+grep_result = grep_results[[1]]
+names(grep_result)
+```
+
+Each result is itself a list with the following items.
+
+| Field | Description |
+|:------|:--------------------|
+| region_stats | Main analysis output, with statistics indicating whether the HDR/WT levels differ in cDNA relative to gDNA. |
+| replicate_stats | A data.frame with a row for each replicate, which has counts of reads in different categories and some summary values. |
+| region | Details of the input region the result corresponds to. |
+| replicates | Details of the input replicates the result corresponds to. |
+| opts | A list containing the options that were given for the analysis. |
+| type | Has the value "grep_analysis", and is used by plotting functions that take a full grep_result list as input. |
+
+The main output of interest is the `region_stats` field.
+
+```{r}
+grep_result$region_stats
+```
+
+| Field | Description |
+|:------|:--------------------|
+| name | Name of the region. |
+| effect | Estimated effect size - the amount by which the HDR:WT ratio differs in cDNA relative to gDNA. |
+| effect_sd | Standard deviation of the estimated effect size. |
+| effect_confint_lo | Lower bound of the 95% confidence interval for the effect size. |
+| effect_confint_hi | Upper bound of the 95% confidence interval for the effect size. |
+| df_estimated | The degrees of freedom used in the unequal variances t-test, which is estimated from the data. |
+| pval | A p value from the unequal variants t-test. |
+
+rgenie determines the ratio of HDR to WT reads in each replicate. It then does a t-test to determine whether this ratio differs between the cDNA replicates and the gDNA replicates.
+
+```{r}
+grep_result$region_stats$effect
+grep_result$region_stats$pval
+```
+
+For this MUL1 experiment, have have an estimated effect size of 1.98, meaning that the HDR allele has a higher fraction in RNA relative to cDNA. In other words, it seems that the alt allele of this SNP nearly doubles expression of MUL1. The p value from the t test is 1.5x10^-4^.
+
+rgenie provides a plotting function that summarises these results.
+
+```{r fig.width=7, fig.height=6}
+rgenie::grep_summary_plot(grep_result)
+```
+
+It is very useful to plot the results, to understand your data better and to find outliers. Here we see that one of the replicates has essentially failed in sequencing - replicate **c1.1** has only 424 reads, compared with ~30,000 - 50,000 for the other replicates. For a more robust result, we should exclude this replicate and re-run the analysis.
+
+```{r}
+replicates = replicates %>% filter(replicate != "c1.1")
+```
+
+## Deletion analysis
+
+An alignment-based deletion analysis looks at all Cas9-induced deletion alleles, in addition to the HDR and WT alleles. It can be run for one or multiple regions, similar to the grep analysis.
+
+```{r}
+setwd("~/genie_example/MUL1/")
+del_results = rgenie::deletion_analysis(regions,
+                                        replicates,
+                                        required_match_left = 10,
+                                        required_match_right = 10,
+                                        crispr_del_window = 100,
+                                        min_mapq = 0,
+                                        max_mismatch_frac = 0.05,
+                                        min_aligned_bases = 30,
+                                        min_window_overlap = 50,
+                                        exclude_multiple_deletions = F,
+                                        exclude_nonspanning_reads = T,
+                                        ignore_noncrispr_deletions = T,
+                                        allele_profile = F,
+                                        del_span_start = -20,
+                                        del_span_end = 20,
+                                        quiet = TRUE)
+```
+
+The main results fields are the same as for `grep_analysis`.
+
+```{r}
+del_result = del_results[[1]]
+names(del_result)
+```
+
+| Field | Description |
+|:------|:--------------------|
+| region_stats | Main analysis output: a one-row data.frame with statistics indicating whether the HDR/WT levels differ in cDNA relative to gDNA. |
+| replicate_stats | A data.frame with a row for each replicate, which has counts of reads in different categories and some summary values. |
+| region | Details of the input region the result corresponds to. |
+| replicates | Details of the input replicates the result corresponds to. |
+| opts | A list containing the options that were given for the analysis. |
+| type | Has the value "grep_analysis", and is used by plotting functions that take a full grep_result list as input. |
+
+The deletion analysis also has many more output tables. We encourage you to explore these outputs yourself, which are described in more detail in the **Advanced rgenie** vignette.
+
+The `region_stats` for a deletion_analysis differs from that for a grep_analysis. Although the result is a tidyverse tibble, we show it here in list format to that the results are easier to see.
+
+```{r}
+tbl = tibble(Name = names(del_result$region_stats), Value = as.character(del_result$region_stats))
+knitr::kable(tbl)
+```
+
+The first fields in the `region_stats` result (e.g. hdr_rate_gDNA) indicate the fraction of reads considered HDR, WT, or as CRISPR deletion reads, separately for cDNA and gDNA.
+
+The remaining `region_stats` fields from a deletion analysis give the same type of values as for a grep analysis: effect estimate, standard deviation, confidence intervals, degrees of freedom, and p value. However, it provides these for three types of alleles:
+
+| Allele type | Description |
+|:------|:--------------------|
+| HDR | Results for the HDR allele relative to WT, as for a grep analysis. |
+| Deletion | Results considering the effect summed across all CRISPR deletions, relative to WT. |
+| Deletion window | Results summed across CRISPR deletions that are contained within a window around the site of interest. This can help to determine if effects are specific to a small region of interest, and to rule out the case where it may be relatively large deletions contributing to an observed effect. |
+
+In general, for estimating effects of the HDR allele, the grep and deletion analyses should give the same results. If they do not, then something is wrong!
+
+Our experience is that the simple analysis based on grep is **more reliable**, because it is not affected by any alignment artifacts. This is particularly the case if a small "required_match_left/right" region is used. However, when a long "required_match" region is specified, then reads with inconsequential mismatches away from the site of interest will not be matched in the grep analysis (whether they are HDR or WT), and this may reduce statistical power.
+
+
+## Deletion analysis plots
+
+The best way to explore your GenIE experiment is using the available plots.
+
+### Deletion summary plot
+
+The below plot summarizes the overall statistics for the region, and values for each replicate. (When there are many replicates the data may not fit, in which case you should manually look at the result$replicate_stats table)
+
+```{r fig.width=7, fig.height=6}
+rgenie::deletion_summary_plot(del_result)
+del_result$replicate_stats
+```
+### Deletion alleles plot
+
+```{r fig.width=7, fig.height=6}
+rgenie::deletion_alleles_plot(del_result,
+                              viewing_window = 40,
+                              color_by="window")
+```
+
+This plot shows every unique deletion allele, merged across all gDNA replicates (left) or all cDNA replicates (right). Unique alleles are referred to as "UDPs" (unique deletion profile).
+
+The viewing_window parameter controls how wide of a region around the `highlight_site` is shown. The position of the highlight site is indicated with a solid vertical line, and the cut site is indicated by a dashed line.
+
+The bottom plot row shows the ***unique alleles***, with a horizontal bar depicting the region deleted. If the `color_by="window"` parameter is specified, then deletions which are contained within a given window (defined in the call to deletion_analysis) are highlighted in red.
+
+The middle row shows the number of ***unique deletions*** which cover each nucleotide position in the viewing window.
+
+The top row shows the number of ***reads*** with a deletion at each nucleotide position in the viewing window.
+
+### Deletion profile plot
+
+```{r fig.width=7, fig.height=6}
+rgenie::deletion_profile_plot(del_result,
+                              viewing_window = 40)
+```
+
+**Relative to all reads:** The top deletion profile plot shows, for each replicate, the fraction of reads with a deletion at that position in the amplicon. This is useful to see how consistent the replicates are and to identify any outliers or strange profiles.
+
+**Relative to WT:** The bottom plot is similar, except that it shows the deletion:WT ratio at each position, for reads that have a deletion covering the position. This is what the statistics are ultimately based on.
+
+It can be difficult at first to understand why the statistics are computed based on this ratio. The ultimate reason is that we consider the effect size of a given allele as being ***relative*** to the WT allele. The fraction of total reads for any allele is dependent not only on the amount of that allele, but also on the other alleles present. If, for example, one allele is highly upregulated in RNA (cDNA), this will affect the fraction of every other allele --- but it will not affect the allele:WT ratio.
+
+
+### Replicate summary plot
+
+```{r fig.width=7, fig.height=6}
+rgenie::replicate_summary_plot(del_result,
+                               outlier_threshold = NA)
+```
+
+The replicate summary plot shows barplots of various values of interest for each replicate, which can help to identify problematic samples.
+
+### Replicate QC plot
+
+```{r fig.width=7, fig.height=6}
+rgenie::replicate_qc_plot(del_result,
+                          outlier_threshold = NA)
+```
+
+The replicate QC plot is discussed in more detail in the **Advanced rgenie** vignette. Broadly, it computes some statistics that help to determine whether any samples are outliers, based on the deviation of some of the top deletion alleles from the average.
+
+This is summarized in the **KNN outlier score**, which is computed separately for cDNA and gDNA, and is only computed if there are at least 4 replicates of the given type. There is no clear threshold for determining an outlier, so you should use your own judgment by looking at the features of each replicate in the replicate summary and deletion profile plots.
+
+### Allele effect plot
+
+```{r fig.width=7, fig.height=6}
+rgenie::allele_effect_plot(del_result,
+                           viewing_window = 40,
+                           max_alleles = 40)
+```
+
+The allele effect plot shows the deletion profile and effect size estimates for a set of top alleles. The HDR allele is shown with a green highlight.
+
+The number of alleles to show is based on the `max_alleles` parameter, and the top alleles are determined based on their number of reads summed across gDNA replicates. Alleles are represented such that a dot means an aligned position to the reference sequence, and a thin dash means the position is deleted.
+
+
+## Multiple regions
+
+The goal of GenIE is usually to screen multiple SNPs for effects on transcription. As such, it is common to perform analyses across many targeted regions.
+
+This is the reason that the `grep_analysis` and `deletion_analysis` functions take in a table of regions and replicates as input. Each returns a list as a result, after conducting the analysis separately for each region. rgenie provides a plot to view a summary of results across many regions.
+
+```{r fig.width=7, fig.height=6}
+rgenie::experiment_summary_plot(grep_results, del_results)
+```
+
+Since we have used a single region in our analysis, we see only one region in the summary plot. More would be shown if the `region` table had included multiple regions (with their corresponding replicates defined in `replicates`).
+
+We can also easily merge together results to give tables across multiple regions.
+
+```{r fig.width=7, fig.height=6}
+grep_tables = rgenie::bind_results(grep_results)
+names(grep_tables)
+
+del_tables = rgenie::bind_results(del_results)
+names(del_tables)
+```
+
+
+## Read alignment (recommendations)
+
+We recommend defining an amplicon sequence as the genome reference, and using
+[FLASH](https://ccb.jhu.edu/software/FLASH/) to stitch together paired-end reads
+(if your reads are paired) before alignment. You should use alignment parameters
+that are very lenient for deletions, since large Cas9-based deletions are expected.
+Typical commands we have used are:
+```
+flash -z --allow-outies -o rep1 -r 150 -f 250 -s 20 -m 4 -x 0.15 fastq/R1.fastq.gz fastq/F2.fastq.gz
+
+bwa mem -t 2 -O 24,48 -E 1 -A 4 -B 16 -T 70 -k 19 -w 200 -d 600 -L 20 -U 40 amplicons.fa rep1.extendedFrags.fastq.gz | samtools view -b - > gDNA_rep1.bam
+```
+
+
+## Other documentation
+
+You may also wish to consult the **Advanced rgenie** vignette.
+

@@ -1,0 +1,36 @@
+Package: rgenie
+Title: RGenie - analysis of GenIE experiments
+Version: 0.0.0.9000
+Authors@R: as.person("Jeremy Schwartzentruber <jeremy37@gmail.com> [aut, cre]")
+Description: The R package for GenIE analysis is designed to analyze the next-generation sequencing
+    output from a set of GenIE experimental replicates. GenIE (genome-editing interrogation of enhancers)
+    is an experimental method to evaluate the effects of individual SNPs on gene transcription. It is
+    based on targeted CRISPR-Cas9 genome editing in cultured cells to produce indels at a target locus,
+    optionally with a homology-dependent recombination (HDR) construct to create precisely defined genomic
+    changes. Following this, both genomic DNA (gDNA) and RNA are extracted from the same pool of cells,
+    then cDNA is generated. Both gDNA and cDNA are amplified with locus-specific PCR primers, in multiple
+    replicates, and libraries of the experimental replicates are prepared for next-generation sequencing.
+    The sequencing data from each replicate for each region should be aligned to either the full reference
+    genome or to a locus-specific (amplicon) reference genome for analysis by RGenie.
+License: MIT license
+URL: http://github.com/jeremy37/rgenie
+BugReports: https://github.com/jeremy37/rgenie/issues
+Encoding: UTF-8
+LazyData: true
+Imports:
+    cowplot (>= 0.9.4),
+    egg (>= 0.4.2),
+    FNN (>= 1.1.3),
+    ggdendro (>= 0.1-20),
+    tidyverse (>= 1.2.1),
+    stringr (>= 1.4.0),
+    variancePartition (>= 1.14.0),
+    ggdendro (>= 0.1-20),
+    gridExtra (>= 2.3),
+    Rsamtools (>= 2.0.0),
+    IRanges (>= 2.18.1)
+Suggests: 
+    knitr,
+    rmarkdown
+VignetteBuilder: knitr
+RoxygenNote: 7.1.1
