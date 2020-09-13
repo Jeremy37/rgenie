@@ -1,5 +1,5 @@
 ---
-title: "Advanced rgenie"
+title: "rgenie in depth"
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{advanced_rgenie}
