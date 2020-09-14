@@ -348,7 +348,7 @@ replicate_grep_analysis = function(read_seqs, hdr_seq_grep, wt_seq_grep) {
 #' will be ignored; i.e. such reads can be considered HDR or WT.
 #' @param min_mapq The minimum mapping quality for reads to be included in the analysis.
 #' @param max_mismatch_frac The maximum fraction of mismatches a read can have and be included in the analysis.
-#' @param min_aligned_bases The minimum length of aligned sequence for a read to be included in the analysis.
+#' @param min_aligned_bases The minimum number of aligned bases within the region of interest for a read to be included in the analysis.
 #' @param exclude_multiple_deletions If TRUE, then reads with multiple deletions will be excluded from the analysis.
 #' @param allele_profile If TRUE, then the result object will contain data.frames named site_profiles and mismatch_profiles, as detailed in the description below.
 #' @param del_span_start An integer that specifies the start of a window, relative to the region's highlight site, within which deletions are counted.
@@ -502,8 +502,7 @@ deletion_analysis = function(regions,
                              crispr_del_window = 100,
                              min_mapq = 0,
                              max_mismatch_frac = 0.05,
-                             min_aligned_bases = 30,
-                             min_window_overlap = 50,
+                             min_aligned_bases = 50,
                              exclude_multiple_deletions = F,
                              exclude_nonspanning_reads = T,
                              allele_profile = F,
@@ -523,7 +522,6 @@ deletion_analysis = function(regions,
               min_mapq = min_mapq,
               max_mismatch_frac = max_mismatch_frac,
               min_aligned_bases = min_aligned_bases,
-              min_window_overlap = min_window_overlap,
               exclude_multiple_deletions = exclude_multiple_deletions,
               exclude_nonspanning_reads = exclude_nonspanning_reads,
               allele_profile = allele_profile,
@@ -762,11 +760,11 @@ replicate_del_analysis = function(name, replicate, type, sites, hdr_profile , wt
   }
 
   # Exclude reads that don't cover enough of the region of interest
-  exclude_for_overlap = (reads.df$seq_length < opts$min_window_overlap)
+  exclude_for_overlap = (reads.df$seq_length < opts$min_aligned_bases)
   counts$reads_excluded_for_minoverlap = sum(exclude_for_overlap * reads.df$count)
   output(opts, sprintf("%d of %d reads (%.2f%%) excluded due to aligning to less than %d bp in the region of interest\n",
               counts$reads_excluded_for_minoverlap, counts$num_reads, 100.0 * counts$reads_excluded_for_minoverlap / counts$num_reads,
-              opts$min_window_overlap))
+              opts$min_aligned_bases))
   reads.df = reads.df[!exclude_for_overlap, ]
 
   # Identify unique deletion profile (UDP) for each read
