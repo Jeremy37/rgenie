@@ -122,6 +122,7 @@ rgenie::deletion_summary_plot(del_results[[1]])
 They are also reported in the `region_stats` result object.
 
 Effect size and p value for deletions within the "del_span" window:
+
 ```{r}
 del_results[[1]]$region_stats$del_window_effect
 del_results[[1]]$region_stats$del_window_pval
@@ -140,10 +141,22 @@ rgenie::deletion_alleles_plot(del_results[[1]])
 
 ```
 
+Effect size and p value for deletions within the smaller "del_span" window:
+
 ```{r}
-sprintf("Effect size for deletions within 20 bp: %f", del_results[[1]]$region_stats$del_window_effect)
-sprintf("P value for deletions within 20 bp: %f", del_results[[1]]$region_stats$del_window_pval)
+del_results[[1]]$region_stats$del_window_effect
+del_results[[1]]$region_stats$del_window_pval
 ```
+
+
+## Differences between deletion and grep analyses
+
+Here are a few notes about the differences between these two types of analysis.
+
+* In a deletion analysis, any read with an insertion anywhere in the aligned region is excluded. In a grep analysis, such a read could be included as HDR or WT if it matched the relevant sequence around the highlight_site.
+* A grep analysis finds HDR or WT reads by an exact sequence match. A deletion analysis is the same, except that it determines the sequence according to the aligned region of the read. Thus, the relevant sequence must match exactly AND this must be aligned at the SNP site.
+* In a deletion analysis, reads with deletions (and which are within the region defined by `crispr_del_window`, noted above) cannot be considered as HDR or WT. In a grep analysis such reads could still potentially match the HDR or WT sequence.
+* In a deletion analysis, a minimum number of bases must align to the region, determined by the `min_aligned_bases` parameter. (Deleted bases are no considered as matching.)
 
 
 ## Variance components
