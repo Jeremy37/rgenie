@@ -149,7 +149,7 @@ experiment_summary_plot = function(grep_results, del_results) {
 #'
 #' @examples
 #' grep_results = grep_analysis(regions, replicates)
-#' grep_summary_plot(grep_result)
+#' grep_summary_plot(grep_results[[1]])
 #' @seealso \code{\link{grep_analysis}}
 #' @export
 #'
@@ -810,14 +810,14 @@ variance_components_plot = function(varcomp,
 variance_partition_summary_table = function(vp.df) {
   # Get some summary stats for each column of the variance partition data.frame
   col = colnames(vp.df)[1]
-  summary_df = summary(vp.df[, col])
+  summary_df = summary(vp.df[, col, drop=T])
   for (col in colnames(vp.df)[-1]) {
-    summary_df = rbind(summary_df, summary(vp.df[, col]))
+    summary_df = rbind(summary_df, summary(vp.df[, col, drop=T]))
   }
   summary_df = as.data.frame(summary_df)
   rownames(summary_df) = colnames(vp.df)
   for (col in colnames(summary_df)) {
-    summary_df[,col] = sapply(summary_df[,col], FUN = function(x) sprintf("%.3g", x))
+    summary_df[,col] = sapply(summary_df[,col,drop=T], FUN = function(x) sprintf("%.3g", x))
   }
   summary_df[, c("1st Qu.", "Median", "3rd Qu.")]
 }
@@ -1184,7 +1184,7 @@ power_plots = function(del_result,
     geom_point() +
     scale_x_log10(breaks = c(0.1, 1, 10)) +
     theme_bw() + xlab("Mean UDP read %") + ylab("UDP coeff of variation") +
-    stat_function(fun = function(x) 1/sqrt(x / 100 * sum(pwr$gDNA_stats$udp_mean)), color = "grey50", size = 1) + # poisson rate of CV
+    stat_function(fun = function(x) 1/sqrt(x / 100 * sum(pwr$gDNA_stats$udp_mean)), color = "grey50", alpha = 0.5, size = 1) + # poisson rate of CV
     stat_function(fun = function(x) {fit_UDP_CV(pwr$coefs$cDNA, x / 100)}, color = "red", alpha = 0.5, size = 1.3) +
     stat_function(fun = function(x) {fit_UDP_CV(pwr$coefs$gDNA, x / 100)}, color = "blue", alpha = 0.5, size = 1.3) +
     scale_color_manual(values = c(cDNA = "red", gDNA = "blue")) +
