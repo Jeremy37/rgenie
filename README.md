@@ -35,9 +35,9 @@ The plot below shows the set of alleles measured in a set of gDNA and cDNA repli
 
 ## Getting started
 
-The [Introductory vignette](https://htmlpreview.github.io/?https://github.com/Jeremy37/rgenie/blob/master/introduction.html) shows how to download example data and run an analysis.
+The [Introductory vignette](https://htmlpreview.github.io/?https://github.com/Jeremy37/rgenie/blob/master/vignettes/introduction.html) shows how to download example data and run an analysis.
 
-The [rgenie in depth vignette]() provides more details on the parameters for some methods and how to interpret results.
+The [rgenie in depth vignette](https://htmlpreview.github.io/?https://github.com/Jeremy37/rgenie/blob/master/vignettes/advanced_rgenie.html) provides more details on the parameters for some methods and how to interpret results.
 
 ## Citation
 
