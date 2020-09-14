@@ -54,7 +54,7 @@ MUL1. It downloads 8 replicates for cDNA and 4 replicates for gDNA - about
 ```{r download_example, message=FALSE}
 library(rgenie)
 library(tidyverse, quietly = T) # Not required, but we use it below
-#download_example(dir = "~/genie_example", name = "MUL1")
+download_example(dir = "~/genie_example", name = "MUL1")
 ```
 
 These files have been aligned to a custom amplicon reference sequence, which corresponds to the region chr1:20507983-20508157 (GRCh38).
@@ -206,7 +206,6 @@ del_results = rgenie::deletion_analysis(regions,
                                         min_window_overlap = 50,
                                         exclude_multiple_deletions = F,
                                         exclude_nonspanning_reads = T,
-                                        ignore_noncrispr_deletions = T,
                                         allele_profile = F,
                                         del_span_start = -20,
                                         del_span_end = 20,
@@ -229,7 +228,7 @@ names(del_result)
 | opts | A list containing the options that were given for the analysis. |
 | type | Has the value "grep_analysis", and is used by plotting functions that take a full grep_result list as input. |
 
-The deletion analysis also has many more output tables. We encourage you to explore these outputs yourself, which are described in more detail in the **Advanced rgenie** vignette.
+The deletion analysis also has many more output tables. We encourage you to explore these outputs yourself, which are described in more detail in the **rgenie in depth** vignette.
 
 The `region_stats` for a deletion_analysis differs from that for a grep_analysis. Although the result is a tidyverse tibble, we show it here in list format to that the results are easier to see.
 
@@ -321,7 +320,7 @@ rgenie::replicate_qc_plot(del_result,
                           outlier_threshold = NA)
 ```
 
-The replicate QC plot is discussed in more detail in the **Advanced rgenie** vignette. Broadly, it computes some statistics that help to determine whether any samples are outliers, based on the deviation of some of the top deletion alleles from the average.
+The replicate QC plot is discussed in more detail in the **rgenie in depth** vignette. Broadly, it computes some statistics that help to determine whether any samples are outliers, based on the deviation of some of the top deletion alleles from the average.
 
 This is summarized in the **KNN outlier score**, which is computed separately for cDNA and gDNA, and is only computed if there are at least 4 replicates of the given type. There is no clear threshold for determining an outlier, so you should use your own judgment by looking at the features of each replicate in the replicate summary and deletion profile plots.
 
@@ -378,5 +377,5 @@ If stitching reads with FLASH, the `--allow-outies` parameter is essential, sinc
 
 ## Other documentation
 
-You may also wish to consult the **Advanced rgenie** vignette.
+You may also wish to consult the **rgenie in depth** vignette.
 
