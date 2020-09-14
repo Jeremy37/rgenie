@@ -16,10 +16,217 @@ knitr::opts_chunk$set(
 
 This vignette describes some of the more advanced parameters and functions of the rgenie package.
 
-## To be described
+If you have a question that is not covered here, please contact me at jeremy37 at gmail.com.
 
+### Setup
+
+First we load the MUL1 example, which targeted a 5' UTR SNP in MUL1, and has 8 cDNA and 4 gDNA PCR replicates.
 
 ```{r setup, message=FALSE}
 library(rgenie)
+library(tidyverse, quietly = T)
+#download_example(dir = "~/genie_example", name = "MUL1")
+regions = readr::read_tsv("~/genie_example/MUL1/mul1.genie_regions.tsv")
+replicates = readr::read_tsv("~/genie_example/MUL1/mul1.genie_replicates.qc_passed.tsv")
 ```
+
+
+## HDR and WT alleles
+
+The sequence to be matched for the HDR and WT alleles is determined by the `hdr_allele_profile` and `wt_allele_profile` values in the `regions` parameter, *as well as* by the parameters `required_match_left` and `required_match_right`.
+
+We first do a grep analysis.
+
+```{r}
+setwd("~/genie_example/MUL1/")
+grep_results = grep_analysis(regions,
+                             replicates,
+                             required_match_left = 10,
+                             required_match_right = 10,
+                             min_mapq = 0,
+                             quiet = T)
+grep_result = grep_results[[1]]
+```
+
+The result shows the sequences that were searched for to match HDR and WT alleles.
+
+```{r}
+grep_result$hdr_seq_grep
+grep_result$wt_seq_grep
+```
+
+If more than one nucleotide is specified in an allele profile, then the region that must exactly match extends to the left of the leftmost position by `required_match_left` bases, and to the right of the rightmost position by `required_match_right` bases. Here we set a required nucleotide match at position 132 in the amplicon for the HDR allele, which is 3 to the left of the SNP position, 135.
+
+```{r}
+setwd("~/genie_example/MUL1/")
+new_hdr_allele_profile = regions$hdr_allele_profile
+substr(new_hdr_allele_profile, 132, 132) = "C"
+grep_results = grep_analysis(regions %>% mutate(hdr_allele_profile = new_hdr_allele_profile),
+                             replicates,
+                             required_match_left = 10,
+                             required_match_right = 10,
+                             min_mapq = 0,
+                             quiet = T)
+grep_result = grep_results[[1]]
+```
+
+We can see in the results that the grep sequences for the HDR allele is extended left by 3 nucleotides.
+
+```{r}
+grep_result$hdr_seq_grep
+grep_result$wt_seq_grep
+```
+ 
+The same principle applies in a deletion analysis. The only difference in a deletion analysis is that the relevant bases must also be aligned in the correct positions. Therefore it may be possible to use a shorter "required match" region in a deletion analysis, which would therefore include reads which have mismatches outside of the "required match" region. If using lenient options for the required match parameters, we recommend comparing the results to those obtained with a longer required match region, to ensure that the results are consistent.
+
+It is possible to use asymmetric values for `required_match_left` and `required_match_right`.
+
+## CRISPR deletion window
+
+The `deletion_analysis` function has an option `crispr_del_window`, which determines the window around the cut site (cut site +/- `crispr_del_window`) within which any deletion is considered a CRISPR deletion. This is an important concept.
+
+It would be possible to simply consider that ANY deletion in a read within the amplicon may relate to the CRISPR-Cas9 editing that was done, and to consider such reads as deletion reads. This can be achieved by setting `crispr_del_window = NA`. However, there are two drawbacks to this:
+
+1. Some amplicons will have many reads with non-CRISPR deletions. This could occur if the cell line used is heterozygous for an indel somewhere in the amplicon. It can also happen if there is a homopolymer tract within the amplicon, and many reads will have short indels due to sequencing errors nearby.
+2. If non-CRISPR deletions are included in the deletion allele count, this could add noise to the estimate of the effect size for deletions.
+
+**Recommendation:**
+We recommend using the widest `crispr_del_window` possible that avoids including too many spurious deletions. A deletion which overlaps any part of the CRISPR deletion window (cut site +/- `crispr_del_window`) will be considered as a deletion read. Deletions which do not overlap this region will not be considered as deletions, and the reads may be considered as either WT or HDR reads. This allows you to effectively ignore spurious deletions that occur far from the site of interest.
+
+The common expectation is that deletions which occur as a result of a double-strand break (DSB) and non-homologous end joining (NHEJ) will emanate from the cut site. However, our experience is that a fraction of reads will have deletions that begin and end as many as 20 bp or farther from the cut site. If a small value is used for `crispr_del_window`, then these will NOT be considered deletions (even though they are Cas9-induced), and the reads may be considered as HDR or WT. This is the reason that by default a very large value is used for `crispr_del_window`.
+
+Note that this concept of counting deletions as CRISPR-induced or not is distinct from the "deletion span" concept discussed below.
+
+## Filtering options
+
+In some cases we may only be interested in small deletions that occur within a window near the SNP site. That is, we wish to exclude large deletions from our analysis of the effect size attributable to deletions. One way to achieve this is to define the "deletion span" in which to count deletions. This is done with the parameters `del_span_start` and `del_span_end`, which define a window relative to the `highlight_site` value defined by the region of interest. Deletions which are entirely contained within this window are counted towards the "deletion window" statistical analysis. Note that deletions outside of this window will still be considered as deletions (and will never by HDR or WT alleles), unlike the `crispr_del_window` parameter described above.
+
+```{r, fig.width=7, fig.height=6}
+setwd("~/genie_example/MUL1/")
+del_results = rgenie::deletion_analysis(regions,
+                                        replicates,
+                                        del_span_start = -20,
+                                        del_span_end = 20,
+                                        quiet = TRUE, allele_profile = T)
+rgenie::deletion_alleles_plot(del_results[[1]])
+```
+
+Deletions that are included in the deletion span are highlighted in red in the deletion alleles plot above.
+
+The statistics for these deletions are reported in the deletion summary plot, as the second DEL/WT value on the right-hand side, with the relevant range indicated.
+
+```{r, fig.width=7, fig.height=6}
+rgenie::deletion_summary_plot(del_results[[1]])
+```
+
+They are also reported in the `region_stats` result object.
+
+Effect size and p value for deletions within the "del_span" window:
+```{r}
+del_results[[1]]$region_stats$del_window_effect
+del_results[[1]]$region_stats$del_window_pval
+```
+
+You can see that when a smaller del_span is used, fewer deletions are included and the estimated effect has changed, although it is consistent with the previous estimate in this case since most of the reads come from short deletions within 10 bp of the SNP site.
+
+```{r, fig.width=7, fig.height=6}
+setwd("~/genie_example/MUL1/")
+del_results = rgenie::deletion_analysis(regions,
+                                        replicates,
+                                        del_span_start = -10,
+                                        del_span_end = 10,
+                                        quiet = TRUE)
+rgenie::deletion_alleles_plot(del_results[[1]])
+
+```
+
+```{r}
+sprintf("Effect size for deletions within 20 bp: %f", del_results[[1]]$region_stats$del_window_effect)
+sprintf("P value for deletions within 20 bp: %f", del_results[[1]]$region_stats$del_window_pval)
+```
+
+
+## Variance components
+
+Different stages of the GenIE experimental process can contribute to noise in the quantification of alleles. Our experience is that the largest contribution is from the PCR itself, which is why it is important to do multiple replicates.
+
+In our paper, we also performed multiple replicates of different steps:
+
+* gDNA extraction, or RNA extraction / cDNA generation
+* PCR
+* sample barcoding
+* sequencing
+
+You could estimate the variance attributable to any experimental step for which you have multiple replicates in each category, such as multiple PCR replicates from distinct RNA extractions. This is done using the result object after performing a deletion analysis.
+
+```{r}
+vc = rgenie::get_variance_components(del_results[[1]],
+                                     replicates,
+                                     allele_min_reads = 100,
+                                     allele_min_fraction = 0.001)
+```
+
+The `replicates` table must have columns with names that begin with "vp_", and which have values for the features you want to estimate variance components for. In this example, two RNA extractions were done, and so the cDNA replicates have one of two values for the "vp_extraction" column.
+
+The `get_variance_components` function returns the variance components partitioning for each unique allele (including HDR, WT, and all deletions) which has at least `allele_min_reads` across all replicates, and which comprises at least `allele_min_fraction` as a fraction of all reads. Variance components are computed separately for cDNA and gDNA.
+
+```{r}
+vc$vp_cDNA %>% select(name, frac, extraction, Residuals, udp)
+```
+The "udp" column gives the allele profile, and "frac" is the average allele fraction across replicates.
+
+These values can also be plotted.
+
+```{r, fig.width=7, fig.height=6, message=FALSE}
+rgenie::variance_components_plot(vc)
+```
+
+Each point in the plot is a distinct allele, and if you included multiple "vp_" columns, then each will be shown.
+
+In this example, we could not estimate variance components for gDNA, because only one gDNA extraction was done.
+
+You can safely ignore the following warning that you might get from the plotting function:
+`Removed 13 rows containing missing values (geom_point).`
+
+
+## Power estimates
+
+You can estimate the power to detect a change in transcription for a given allele relative to WT, based on:
+
+* allele fraction
+* effect size
+
+Alleles with higher abundance typically have lower noise, which we characterise by the coefficient of variation (standard deviation / mean) of their allele fraction across replicates. We then fit a curve to be able to predict the coefficient of variation for any allele at a given fraction of reads.
+
+### CV plot
+A call to `power_plots` returns three plots. The first of these, `cv_plot` shows the fit between allele read fraction and coefficient of variation (CV).
+
+```{r, fig.width=7, fig.height=6}
+plots = rgenie::power_plots(del_results[[1]])
+plots$cv_plot
+```
+
+The HDR and WT alleles are shown with a triangle and square, respectively. Separate curves are fit for cDNA and gDNA, since noise levels are usually higher in cDNA, especially when amplifying an intronic region (nascent transcript).
+
+### Power plot
+The `power_plot` shows the estimated power to detect an effect of a given size and allele fraction (read %). Here the effect size refers to the fold increase in expression in RNA relative to gDNA. (We have not shown power estimates for a similar fold ***decrease*** in expression in RNA.)
+
+```{r, fig.width=7, fig.height=6}
+plots$power_plot
+```
+
+### Replicate allocation plot
+The `replicate_allocation_plot` estimates how replicates should be allocated between cDNA and gDNA, assuming a given number of replicates. In general our experience is that you should have at least twice the number of cDNA replicates as gDNA, as long as you have at least 3 gDNA replicates, since allele fraction estimates in cDNA are higher. In practice we have typically conducted 8 cDNA and 4 gDNA PCR replicates for each targeted region.
+
+```{r, fig.width=7, fig.height=6}
+plots$replicate_allocation_plot
+```
+
+You can get tables with the data shown in the plots by a call to `power_analysis`.
+
+```{r}
+pwr = rgenie::power_analysis(del_results[[1]])
+```
+
+
 
