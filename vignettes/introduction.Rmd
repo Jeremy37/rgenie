@@ -54,7 +54,7 @@ MUL1. It downloads 8 replicates for cDNA and 4 replicates for gDNA - about
 ```{r download_example, message=FALSE}
 library(rgenie)
 library(tidyverse, quietly = T) # Not required, but we use it below
-download_example(dir = "~/genie_example", name = "MUL1")
+rgenie::download_example(dir = "~/genie_example", name = "MUL1")
 ```
 
 These files have been aligned to a custom amplicon reference sequence, which corresponds to the region chr1:20507983-20508157 (GRCh38).
@@ -183,7 +183,7 @@ rgenie provides a plotting function that summarises these results.
 rgenie::grep_summary_plot(grep_result)
 ```
 
-It is very useful to plot the results, to understand your data better and to find outliers. Here we see that one of the replicates has essentially failed in sequencing - replicate **c1.1** has only 424 reads, compared with ~30,000 - 50,000 for the other replicates. For a more robust result, we should exclude this replicate and re-run the analysis.
+It is very useful to plot the results, to understand your data better and to find outliers. Here we see that one of the replicates has essentially failed in sequencing - replicate **c1.1** has only 424 reads, compared with ~30,000 - 50,000 for the other replicates. For a more robust result, we should exclude this replicate and re-run the analysis (left as an exercise).
 
 ```{r}
 replicates = replicates %>% filter(replicate != "c1.1")
@@ -202,8 +202,7 @@ del_results = rgenie::deletion_analysis(regions,
                                         crispr_del_window = 100,
                                         min_mapq = 0,
                                         max_mismatch_frac = 0.05,
-                                        min_aligned_bases = 30,
-                                        min_window_overlap = 50,
+                                        min_aligned_bases = 50,
                                         exclude_multiple_deletions = F,
                                         exclude_nonspanning_reads = T,
                                         allele_profile = F,
@@ -230,7 +229,7 @@ names(del_result)
 
 The deletion analysis also has many more output tables. We encourage you to explore these outputs yourself, which are described in more detail in the **rgenie in depth** vignette.
 
-The `region_stats` for a deletion_analysis differs from that for a grep_analysis. Although the result is a tidyverse tibble, we show it here in list format to that the results are easier to see.
+The `region_stats` for a deletion_analysis differs from that for a grep_analysis. Although the result is a tidyverse tibble, we show it here in list format so that the results are easier to see.
 
 ```{r}
 tbl = tibble(Name = names(del_result$region_stats), Value = as.character(del_result$region_stats))
