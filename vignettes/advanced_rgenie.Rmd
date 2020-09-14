@@ -2,7 +2,7 @@
 title: "rgenie in depth"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{advanced_rgenie}
+  %\VignetteIndexEntry{rgenie in depth}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -25,7 +25,7 @@ First we load the MUL1 example, which targeted a 5' UTR SNP in MUL1, and has 8 c
 ```{r setup, message=FALSE}
 library(rgenie)
 library(tidyverse, quietly = T)
-#download_example(dir = "~/genie_example", name = "MUL1")
+download_example(dir = "~/genie_example", name = "MUL1")
 regions = readr::read_tsv("~/genie_example/MUL1/mul1.genie_regions.tsv")
 replicates = readr::read_tsv("~/genie_example/MUL1/mul1.genie_replicates.qc_passed.tsv")
 ```
