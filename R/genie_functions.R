@@ -40,32 +40,6 @@
 NULL
 
 
-genie_default_options = function() {
-  default_opts = list(
-    grep_analysis = T,
-    required_match_left = 10,
-    required_match_right = 10,
-    crispr_del_window = 100, # window around the cut site for counting deletions as edits
-    min_mapq = 0,
-    max_mismatch_frac = 0.05,
-    min_aligned_bases = 30,
-    min_window_overlap = 50, # minimum number of read bases correctly aligned within the region of interest
-    exclude_multiple_deletions = F,
-    exclude_nonspanning_reads = T,
-    ignore_noncrispr_deletions = T,
-    allele_profile = F,
-    del_span_start = -20,
-    del_span_end = 20,
-    qc_max_alleles = 20,
-    qc_min_avg_allele_fraction = 0.005,
-    qc_exclude_wt = T,
-    viewing_window = 40,
-    variance_analysis_min_count = 100,
-    variance_analysis_min_fraction = 0.001)
-  return(default_opts)
-}
-
-
 # Checks that the options are valid, and fills in any needed additional opts
 check_del_opts = function(opts) {
   if (is.null(opts$crispr_del_window) || opts$crispr_del_window < 1) {
@@ -140,23 +114,26 @@ check_regions_and_replicates = function(regions, replicates) {
 #'   \strong{wt_allele_profile} \tab An allele profile describing the WT allele. See details below. \cr
 #' }
 #'
-#'   The allele_profile columns indicate the positions in the amplicon sequence
-#'   that must match a given nucleotide for a read to be considered either HDR
-#'   or WT. This sequence must be the same length as the reference sequence,
-#'   and all other positions should be "-". The total sequence region that must
-#'   match is determined by both the positions of specified nucleotides and by
-#'   the \strong{required_match_left} and \strong{required_match_right}
-#'   parameters. These parameters give the length of sequence which must match
-#'   the provided reference sequence to the left of the leftmost specified
-#'   nucleotide, or to the right of the rightmost specified nucleotide.
+#' If multiple rows are defined for `regions`, then a separate analysis is run
+#' for each region, using matched replicates from `replicates`.
+#'
+#' The allele_profile columns indicate the positions in the amplicon sequence
+#' that must match a given nucleotide for a read to be considered either HDR
+#' or WT. This sequence must be the same length as the reference sequence,
+#' and all other positions should be "-". The total sequence region that must
+#' match is determined by both the positions of specified nucleotides and by
+#' the \strong{required_match_left} and \strong{required_match_right}
+#' parameters. These parameters give the length of sequence which must match
+#' the provided reference sequence to the left of the leftmost specified
+#' nucleotide, or to the right of the rightmost specified nucleotide.
 #'
 #'
-#'   The replicates parameter is a data.frame with a format as below.
-#'   \tabular{lccl}{ name \tab replicate \tab type \tab bam \cr MUL1_rs6700034
-#'   \tab c1.2 \tab cDNA \tab
-#'   bam_amplicon/MUL1_rs6700034_cDNA_rep1_pcr2.sortedByCoord.bam \cr
-#'   MUL1_rs6700034 \tab c1.3 \tab cDNA \tab
-#'   bam_amplicon/MUL1_rs6700034_cDNA_rep1_pcr3.sortedByCoord.bam \cr }
+#' The replicates parameter is a data.frame with a format as below.
+#' \tabular{lccl}{ name \tab replicate \tab type \tab bam \cr MUL1_rs6700034
+#' \tab c1.2 \tab cDNA \tab
+#' bam_amplicon/MUL1_rs6700034_cDNA_rep1_pcr2.sortedByCoord.bam \cr
+#' MUL1_rs6700034 \tab c1.3 \tab cDNA \tab
+#' bam_amplicon/MUL1_rs6700034_cDNA_rep1_pcr3.sortedByCoord.bam \cr }
 #'
 #' \tabular{rl}{
 #'   \strong{name} \tab Indicates the region that a given replicate
@@ -170,11 +147,39 @@ check_regions_and_replicates = function(regions, replicates) {
 #'   a BAM file with sequencing reads for the replicate. \cr
 #' }
 #'
+#' Statistics can only be computed if there are at least 2 replicates of each
+#' type (cDNA and gDNA). Replicates are matched to the region based on the
+#' \strong{name} column.
+#'
+#' @section Results: The returned object is a list, where each item is the
+#' result for one region. The result for a region (e.g. results[[1]]) is itself
+#' a list, with the following items:
+#' \tabular{rl}{
+#'   \strong{region_stats} \tab Main analysis output, with statistics indicating whether the HDR/WT levels differ in cDNA relative to gDNA. \cr
+#'   \strong{replicate_stats} \tab A data.frame with a row for each replicate, which has counts of reads in different categories and some summary values. \cr
+#'   \strong{region} \tab 	Details of the input region the result corresponds to. \cr
+#'   \strong{replicates} \tab Details of the input replicates the result corresponds to. \cr
+#'   \strong{opts} \tab A list containing the options that were given for the analysis. \cr
+#'   \strong{type} \tab Has the value “grep_analysis”, and is used by plotting functions that take a full grep_result list as input. \cr
+#' }
+#'
+#' The main output of interest is the `region_stats` field, which is a one-row data.frame with the following values:
+#'
+#' \tabular{rl}{
+#'   \strong{name} \tab Name of the region. \cr
+#'   \strong{effect} \tab Estimated effect size - the amount by which the HDR:WT ratio differs in cDNA relative to gDNA. \cr
+#'   \strong{effect_sd} \tab Standard deviation of the estimated effect size. \cr
+#'   \strong{effect_confint_lo} \tab Lower bound of the 95\% confidence interval for the effect size. \cr
+#'   \strong{effect_confint_hi} \tab Upper bound of the 95\% confidence interval for the effect size. \cr
+#'   \strong{df_estimated} \tab The degrees of freedom used in the unequal variances t-test, which is estimated from the data. \cr
+#'   \strong{pval} \tab A p value from the unequal variants t-test. \cr
+#' }
+#'
 #' @examples
-#' grep_result_list = grep_analysis(regions, replicates)
-#' grep_analysis_plot(grep_result_list)
+#' grep_results = grep_analysis(regions, replicates)
+#' grep_summary_plot(grep_results[[1]])
 #' @seealso \code{\link{deletion_analysis}}
-#' @seealso \code{\link{grep_analysis_plot}}
+#' @seealso \code{\link{grep_summary_plot}}
 #' @export
 #'
 grep_analysis = function(regions,
@@ -227,15 +232,34 @@ region_grep_analysis = function(region, replicates, opts)
   opts$region = region
   opts$replicates = replicates
 
+  hdr_profile = str_to_upper(region$hdr_allele_profile)
+  wt_profile = str_to_upper(region$wt_allele_profile)
+  ref_sequence = str_to_upper(region$ref_sequence)
+  sequence_name = region$sequence_name
+
+  hdr_profile_chars = strsplit(hdr_profile, "")[[1]]
+  wt_profile_chars = strsplit(wt_profile, "")[[1]]
+  ref_seq_chars = strsplit(ref_sequence, "")[[1]]
+
+  get_grep_sequence = function(profile_chars, ref_chars) {
+    profile_is_letter = is_dna_letter(profile_chars)
+    char_positions = which(profile_is_letter)
+    minpos = max(1, min(char_positions) - opts$required_match_left)
+    maxpos = min(length(ref_chars), max(char_positions) + opts$required_match_right)
+    grep_chars = ref_chars
+    grep_chars[profile_is_letter] = profile_chars[profile_is_letter]
+    paste(grep_chars[minpos:maxpos], collapse = "")
+  }
+  hdr_seq_grep = get_grep_sequence(hdr_profile_chars, ref_seq_chars)
+  wt_seq_grep = get_grep_sequence(wt_profile_chars, ref_seq_chars)
+  output(opts, sprintf("HDR grep sequence: %s\n", hdr_seq_grep))
+  output(opts, sprintf("WT grep sequence:  %s\n", wt_seq_grep))
+
   replicate_grep_analyses = list()
   for (i in 1:nrow(replicates)) {
     bam_file = replicates$bam[i]
     replicate = replicates$replicate[i]
     type = replicates$type[i]
-    hdr_profile = str_to_upper(region$hdr_allele_profile)
-    wt_profile = str_to_upper(region$wt_allele_profile)
-    ref_sequence = str_to_upper(region$ref_sequence)
-    sequence_name = region$sequence_name
 
     output(opts, sprintf("\n\nAnalysing region %s, replicate %s, file %s\n", region$name, replicate, bam_file, region$sequence_name))
     output(opts, sprintf("HDR allele: %s\n", hdr_profile))
@@ -262,17 +286,12 @@ region_grep_analysis = function(region, replicates, opts)
     }
 
     result = replicate_grep_analysis(read_seqs = read_data$seq,
-                                     hdr_profile = hdr_profile,
-                                     wt_profile = wt_profile,
-                                     ref_sequence = ref_sequence,
-                                     opts$required_match_left,
-                                     opts$required_match_right)
+                                     hdr_seq_grep = hdr_seq_grep,
+                                     wt_seq_grep = wt_seq_grep)
     result$name = region$name
     result$replicate = replicate
     result$type = type
     replicate_grep_analyses[[i]] = result
-    output(opts, sprintf("HDR grep sequence: %s\n", result$hdr_seq_grep))
-    output(opts, sprintf("WT grep sequence:  %s\n", result$wt_seq_grep))
   }
 
   counts.df = bind_rows(replicate_grep_analyses) %>%
@@ -295,58 +314,172 @@ region_grep_analysis = function(region, replicates, opts)
   return( list(type = "grep_analysis",
                opts = opts,
                replicate_stats = counts.df,
-               region_stats = hdr_ratio_res) )
+               region_stats = hdr_ratio_res,
+               hdr_seq_grep = hdr_seq_grep,
+               wt_seq_grep = wt_seq_grep) )
 }
 
 
 # Gets allele counts with grep for a single replicate
-replicate_grep_analysis = function(read_seqs, hdr_profile, wt_profile, ref_sequence, required_match_left, required_match_right) {
-  hdr_profile_chars = strsplit(hdr_profile, "")[[1]]
-  wt_profile_chars = strsplit(wt_profile, "")[[1]]
-  ref_seq_chars = strsplit(ref_sequence, "")[[1]]
-
-  get_grep_sequence = function(profile_chars, ref_chars) {
-    profile_is_letter = is_dna_letter(profile_chars)
-    char_positions = which(profile_is_letter)
-    minpos = max(1, min(char_positions) - required_match_left)
-    maxpos = min(length(ref_chars), max(char_positions) + required_match_right)
-    grep_chars = ref_chars
-    grep_chars[profile_is_letter] = profile_chars[profile_is_letter]
-    paste(grep_chars[minpos:maxpos], collapse = "")
-  }
-  hdr_seq_grep = get_grep_sequence(hdr_profile_chars, ref_seq_chars)
-  wt_seq_grep = get_grep_sequence(wt_profile_chars, ref_seq_chars)
-
+replicate_grep_analysis = function(read_seqs, hdr_seq_grep, wt_seq_grep) {
   read_seqs_char = as.character(read_seqs)
   hdr_read_count = sum(sapply(read_seqs_char, FUN = function(s) grepl(hdr_seq_grep, s, fixed=T)))
   wt_read_count = sum(sapply(read_seqs_char, FUN = function(s) grepl(wt_seq_grep, s, fixed=T)))
   return(list(num_reads = length(read_seqs_char),
               num_hdr_reads = hdr_read_count,
-              num_wt_reads = wt_read_count,
-              hdr_seq_grep = hdr_seq_grep,
-              wt_seq_grep = wt_seq_grep))
+              num_wt_reads = wt_read_count))
 }
 
 
-#' Runs an alignment-based GenIE analysis
+#' Alignment-based GenIE analysis
+#'
+#' For each replicate associated with an input region, \code{deletion_analysis}
+#' identifies HDR or WT sequences, as well as deletion alleles, and returns
+#' statistics that indicate for every allele whether the allele:WT ratio
+#' differs in cDNA and gDNA. Statistics are also computed for deletion alleles
+#' aggregated together.
 #'
 #' @param regions A data.frame defining GenIE regions.
 #' @param replicates A data.frame defining GenIE replicates.
 #' @param required_match_left The length of sequence to the left of the HDR site that must exactly match to identify HDR or WT reads.
 #' @param required_match_right The length of sequence to the right of the HDR site that must exactly match to identify HDR or WT reads.
 #' @param crispr_del_window The window around the cut site within which any deletion is considered a CRISPR deletion.
+#' deletions that do not span the region [cut_site - crispr_del_window, cut_site + crispr_del_window]
+#' will be ignored; i.e. such reads can be considered HDR or WT.
 #' @param min_mapq The minimum mapping quality for reads to be included in the analysis.
 #' @param max_mismatch_frac The maximum fraction of mismatches a read can have and be included in the analysis.
 #' @param min_aligned_bases The minimum length of aligned sequence for a read to be included in the analysis.
 #' @param exclude_multiple_deletions If TRUE, then reads with multiple deletions will be excluded from the analysis.
-#' @param ignore_noncrispr_deletions If TRUE, then deletions that do not span the region [cut_site - crispr_del_window, cut_site + crispr_del_window] will be ignored; i.e. such reads can be considered HDR or WT.
 #' @param allele_profile If TRUE, then the result object will contain data.frames named site_profiles and mismatch_profiles, as detailed in the description below.
 #' @param del_span_start An integer that specifies the start of a window, relative to the region's highlight site, within which deletions are counted.
 #' @param del_span_end An integer that specifies the end of a window, relative to the region's highlight site, within which deletions are counted.
-#' @return Returns a list containing GenIE outputs that depend on the options that were set.
+#' @param quiet If TRUE, then no messages are printing during the analysis.
+#'
+#' @section Details: For a deletion analysis, the regions parameter is a data.frame
+#'   with a format as follows. All of the column names below must be specified.
+#'   \tabular{lccccclll}{ name \tab sequence_name \tab start \tab end \tab
+#'   highlight_site \tab cut_site \tab hdr_allele_profile \tab wt_allele_profile
+#'   \tab ref_sequence \cr MUL1_rs6700034  \tab MUL1  \tab 1 \tab 21 \tab 11
+#'   \tab 9 \tab ----------A---------- \tab ----------C---------- \tab
+#'   ACCGCACCCCCCCGGCCTAAC \cr }
+#'
+#' \tabular{rl}{
+#'   \strong{name} \tab A unique identifier for the region. \cr
+#'   \strong{sequence_name} \tab The chromosome or amplicon sequence name. \cr
+#'   \strong{start} \tab The start coordinate of the amplicon relative to the chromosome or amplicon reference. \cr
+#'   \strong{end} \tab The end coordinate of the amplicon relative to the chromosome or amplicon reference (the end coordinate is included in the region). \cr
+#'   \strong{highlight_site} \tab The relative position of the site of interest, usually the HDR SNP site. \cr
+#'   \strong{cut_site} \tab The relative position of the cut site. \cr
+#'   \strong{ref_sequence} \tab The reference sequence for the amplicon region, which must have length (end - start + 1). \cr
+#'   \strong{hdr_allele_profile} \tab An allele profile describing the HDR allele. See details below. \cr
+#'   \strong{wt_allele_profile} \tab An allele profile describing the WT allele. See details below. \cr
+#' }
+#'
+#' If multiple rows are defined for `regions`, then a separate analysis is run
+#' for each region, using matched replicates from `replicates`.
+#'
+#' The allele_profile columns indicate the positions in the amplicon sequence
+#' that must match a given nucleotide for a read to be considered either HDR
+#' or WT. This sequence must be the same length as the reference sequence,
+#' and all other positions should be "-". The total sequence region that must
+#' match is determined by both the positions of specified nucleotides and by
+#' the \strong{required_match_left} and \strong{required_match_right}
+#' parameters. These parameters give the length of sequence which must match
+#' the provided reference sequence to the left of the leftmost specified
+#' nucleotide, or to the right of the rightmost specified nucleotide.
+#'
+#'
+#' The replicates parameter is a data.frame with a format as below.
+#' \tabular{lccl}{ name \tab replicate \tab type \tab bam \cr MUL1_rs6700034
+#' \tab c1.2 \tab cDNA \tab
+#' bam_amplicon/MUL1_rs6700034_cDNA_rep1_pcr2.sortedByCoord.bam \cr
+#' MUL1_rs6700034 \tab c1.3 \tab cDNA \tab
+#' bam_amplicon/MUL1_rs6700034_cDNA_rep1_pcr3.sortedByCoord.bam \cr }
+#'
+#' \tabular{rl}{
+#'   \strong{name} \tab Indicates the region that a given replicate
+#'   corresponds with. All replicates matching the name in the regions table
+#'   will be used. \cr
+#'   \strong{replicate} \tab an ID for the replicate, which must
+#'   be unique among replicates for the region. \cr
+#'   \strong{type} \tab Must have the value "cDNA" or "gDNA", indicating
+#'   whether a given replicate contains data for cDNA or gDNA. \cr
+#'   \strong{bam} \tab the path (relative to the working directory) to
+#'   a BAM file with sequencing reads for the replicate. \cr
+#' }
+#'
+#' Statistics can only be computed if there are at least 2 replicates of each
+#' type (cDNA and gDNA). Replicates are matched to the region based on the
+#' \strong{name} column.
+#'
+#' @section Results: The returned object is a list, where each item is the
+#' result for one region. The result for a region (e.g. results[[1]]) is itself
+#' a list, with the following items:
+#' \tabular{rl}{
+#'   \strong{region_stats} \tab Main analysis output, with statistics indicating whether the HDR/WT levels differ in cDNA relative to gDNA. \cr
+#'   \strong{replicate_stats} \tab A data.frame with a row for each replicate, which has counts of reads in different categories and some summary values. \cr
+#'   \strong{region} \tab 	Details of the input region the result corresponds to. \cr
+#'   \strong{replicates} \tab Details of the input replicates the result corresponds to. \cr
+#'   \strong{opts} \tab A list containing the options that were given for the analysis. \cr
+#'   \strong{type} \tab Has the value “deletion_analysis”, and is used by plotting functions that take a full del_result list as input. \cr
+#' }
+#'
+#' The main output of interest is the `region_stats` field, which is a one-row data.frame with the following values:
+#'
+#' \tabular{rl}{
+#'   \strong{name} \tab Name of the region. \cr
+#'   \strong{hdr_rate_gDNA} \tab Fraction of reads in gDNA identified as HDR. \cr
+#'   \strong{hdr_rate_cDNA} \tab Fraction of reads in cDNA identified as HDR. \cr
+#'   \strong{wt_rate_gDNA} \tab Fraction of reads in gDNA identified as WT \cr
+#'   \strong{wt_rate_cDNA} \tab Fraction of reads in cDNA identified as WT. \cr
+#'   \strong{del_rate_gDNA} \tab Fraction of reads in gDNA identified as having a CRISPR deletion. \cr
+#'   \strong{del_rate_cDNA} \tab Fraction of reads in cDNA identified as having a CRISPR deletion. \cr
+#'   \strong{hdr_effect} \tab HDR allele: Estimated effect size - the amount by which the HDR:WT ratio differs in cDNA relative to gDNA. \cr
+#'   \strong{hdr_effect_sd} \tab HDR allele: Standard deviation of the estimated effect size. \cr
+#'   \strong{hdr_effect_confint_lo} \tab HDR allele: Lower bound of the 95\% confidence interval for the effect size. \cr
+#'   \strong{hdr_effect_confint_hi} \tab HDR allele: Upper bound of the 95\% confidence interval for the effect size. \cr
+#'   \strong{hdr_df_estimated} \tab THDR allele: he degrees of freedom used in the unequal variances t-test, which is estimated from the data. \cr
+#'   \strong{hdr_pval} \tab HDR allele: A p value from the unequal variants t-test. \cr
+#' }
+#'
+#' The fields above beginning with `hdr_` give statistics relating to the HDR allele.
+#' There are 6 equivalent fields that begin with `del_` which relate to all deletions.
+#' There are also 6 equivalent fields that begin with `del_window_`, which relate to
+#' deletions that are contained within a window around the `highlight_site` (defined in
+#' the region input), the extent of which is determined by `crispr_del_window` parameter.
+#'
+#' @section Additional fields: The deletion_analysis result object additionally has the following fields:
+#' \tabular{rl}{
+#'   \strong{replicate_qc} \tab A data.frame of summary information for each replicate,
+#'   with counts of reads in different categories, editing rates per replicate, and
+#'   quality control summary information. \cr
+#'   \strong{replicate_alleles} \tab A data.frame of summary information for each unique
+#'   allele in each replicate. \cr
+#'   \strong{region_alleles} \tab A data.frame of summary information for each unique
+#'   allele averaged across all replicates. \cr
+#'   \strong{replicate_allele_fractions} \tab A data.frame of summary information for
+#'   the top 20 alleles across all replicates, which is used for replicate quality control. \cr
+#'   \strong{allele_effect} \tab A data.frame of GenIE effect size estimates (difference
+#'   in allele:WT ratio in cDNA vs. gDNA) for each unique allele with sufficient reads
+#'   across replicates. \cr
+#'   \strong{site_profiles} \tab A data.frame which indicates read counts for each combination of observed
+#'   nucleotides at each specified position in the wt_allele_profile, separately for each replicate. For
+#'   example, if 1 position is defined, then there will be up to 5 unique combinations in each replicate,
+#'   accounting for A, C, G, T, or * (deletion). If 2 positions are defined, there are up to 25 combinations.
+#'   This can be useful to check whether the fraction of WT or edited reads is as expected. In particular,
+#'   if a heterozygous site is targeted, and only one of the haplotype alleles actually gets edited, then
+#'   you expect depletion of only one of the nucleotides at the SNP site. \cr
+#'   \strong{mismatch_profiles} \tab A data.frame which contains every unique read profile,
+#'   including mismatches, for reads considered as WT or HDR. This can help to identify if
+#'   there are an abundance of "HDR" or "WT" reads with mismatches at a particular position,
+#'   or an excess of mismatches in general. \cr
+#'   \strong{replicate_list} \tab Internal data for each replicate. Not likely to be of interest to the user. \cr
+#'   \strong{type} \tab  \cr
+#' }
 #'
 #' @examples
 #' del_results = deletion_analysis(regions, replicates)
+#' deletion_plots(del_results[[1]])
 #' @seealso \code{\link{grep_analysis}}
 #' @seealso \code{\link{deletion_plots}}
 #' @seealso \code{\link{deletion_summary_plot}}
@@ -373,7 +506,6 @@ deletion_analysis = function(regions,
                              min_window_overlap = 50,
                              exclude_multiple_deletions = F,
                              exclude_nonspanning_reads = T,
-                             ignore_noncrispr_deletions = T,
                              allele_profile = F,
                              del_span_start = -20,
                              del_span_end = 20,
@@ -394,7 +526,6 @@ deletion_analysis = function(regions,
               min_window_overlap = min_window_overlap,
               exclude_multiple_deletions = exclude_multiple_deletions,
               exclude_nonspanning_reads = exclude_nonspanning_reads,
-              ignore_noncrispr_deletions = ignore_noncrispr_deletions,
               allele_profile = allele_profile,
               del_span_start = del_span_start,
               del_span_end = del_span_end,
@@ -648,7 +779,7 @@ replicate_del_analysis = function(name, replicate, type, sites, hdr_profile , wt
   reads.df$is_wt_allele[!reads.df$spanning_read] = NA
 
   reads.df$has_any_deletion = sapply(reads.df$udp, FUN=function(s) grepl("[*]", s))
-  if (opts$ignore_noncrispr_deletions) {
+  if (!is.na(opts$crispr_del_window)) {
     startPos = max(1, sites$cut_site - opts$crispr_del_window)
     endPos = min(region_length, sites$cut_site + opts$crispr_del_window)
     reads.df$has_crispr_deletion = (!reads.df$is_wt_allele & grepl("[*]", substr(reads.df$udp, startPos, endPos)) )
@@ -895,8 +1026,8 @@ get_region_del_stats = function(replicate_data, replicates.df) {
 #' @return Returns quality control statistics for results from a deletion analysis.
 #'
 #' @examples
-#' del_result = deletion_analysis(regions, replicates)
-#' metrics = replicate_qc_metrics(del_result)
+#' del_results = deletion_analysis(regions, replicates)
+#' metrics = replicate_qc_metrics(del_results[[1]])
 #' @seealso \code{\link{deletion_analysis}}
 #' @seealso \code{\link{replicate_summary_plot}}
 #' @seealso \code{\link{replicate_qc_plot}}
@@ -1173,7 +1304,7 @@ fit_variance_components = function(replicate.udp.spread.df, replicates.type.df) 
     return(NULL)
   }
 
-  cat(sprintf("Region %s, %s: fitting variance components with model:\n    UDP_fraction %s\n", region_name, region_type, formulaStr))
+  message(sprintf("Region %s, %s: fitting variance components with model:\n    UDP_fraction %s\n", region_name, region_type, formulaStr))
   vp <- variancePartition::fitExtractVarPartModel(exprObj = replicate.udp.expr,
                                                   formula = as.formula(formulaStr),
                                                   data = replicates.type.df,
@@ -1193,7 +1324,7 @@ fit_variance_components = function(replicate.udp.spread.df, replicates.type.df) 
 #' @return Returns a list with tables vp_cDNA and vp_gDNA, which partition variance according to the metadata columns that begin with "replicate_" in the 'replicates' parameter.
 #' @examples
 #' del_results = deletion_analysis(regions, replicates)
-#' vc = get_variance_components(del_result[[1]], replicates)
+#' vc = get_variance_components(del_results[[1]], replicates)
 #' variance_components_plot(vc)
 #' @seealso \code{\link{deletion_analysis}}
 #' @seealso \code{\link{variance_components_plot}}
@@ -1299,7 +1430,7 @@ get_variance_components = function(del_result, replicates, allele_min_reads = 10
                                                  replicates %>% dplyr::filter(name == regions[i], type == dna_type),
                                                  dna_type, allele_min_reads, allele_min_fraction)
   }
-  vp_cDNA = bind_rows(dflist)
+  vp_cDNA = as_tibble(bind_rows(dflist))
 
   # Do the same for gDNA
   dna_type = "gDNA"
@@ -1310,7 +1441,7 @@ get_variance_components = function(del_result, replicates, allele_min_reads = 10
                                                  replicates %>% dplyr::filter(name == regions[i], type == dna_type),
                                                  dna_type, allele_min_reads, allele_min_fraction)
   }
-  vp_gDNA = bind_rows(dflist)
+  vp_gDNA = as_tibble(bind_rows(dflist))
 
   opts = list(del_result = del_result,
               replicates = replicates,
@@ -1368,7 +1499,7 @@ get_udp_stats = function(replicate_udps, dna_type, allele_min_reads) {
 #' @return Returns...
 #' @examples
 #' del_results = deletion_analysis(regions, replicates)
-#' pwr = power_analysis(del_result[[1]], replicates)
+#' pwr = power_analysis(del_results[[1]], replicates)
 #' power_plots(pwr)
 #' @seealso \code{\link{deletion_analysis}}
 #' @seealso \code{\link{power_plots}}
@@ -1799,23 +1930,28 @@ bind_results = function(results) {
 #' @seealso \code{\link{deletion_analysis}}
 #' @export
 #'
-download_example = function(dir = "~/genie_example", name = "MUL1", quiet = F) {
+download_example = function(dir = "~/genie_example", name = "MUL1", overwrite = F, quiet = F) {
   valid_examples = c("MUL1", "ABHD4")
   if (!(name %in% valid_examples)) {
     stop(sprintf("Name %s is not one of the available examples: {%s}", name, paste(valid_examples, collapse = ", ")))
   }
+  # If directory doesn't exist, then create it
+  ex_dir = file.path(dir, name)
+  if (dir.exists(ex_dir) && !overwrite) {
+    message(sprintf("Example data for %s is already present. To overwrite it, set overwrite = TRUE.", name))
+    return()
+  }
+
+  dir.create(ex_dir, recursive = TRUE, showWarnings = FALSE)
   fpath = sprintf("https://raw.githubusercontent.com/Jeremy37/rgenie_example/master/file_list.%s.txt", name)
   file_list = readr::read_csv(url(fpath), col_names = "path")$path
 
-  # If directory doesn't exist, then create it
-  ex_dir = file.path(dir, name)
-  dir.create(ex_dir, recursive = TRUE, showWarnings = FALSE)
   for (fpath in file_list) {
     path_parts = strsplit(fpath, "/", fixed = T)[[1]]
     fname = path_parts[length(path_parts)]
     destfile = file.path(ex_dir, fname)
     download.file(fpath, destfile, quiet = quiet)
   }
-  cat(sprintf("Downloaded data for example '%s' to %s", name, ex_dir))
+  message(sprintf("Downloaded data for example '%s' to %s", name, ex_dir))
 }
 
