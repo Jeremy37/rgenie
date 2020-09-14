@@ -1937,19 +1937,18 @@ download_example = function(dir = "~/genie_example", name = "MUL1", overwrite = 
   ex_dir = file.path(dir, name)
   if (dir.exists(ex_dir) && !overwrite) {
     message(sprintf("Example data for %s is already present. To overwrite it, set overwrite = TRUE.", name))
-    return()
-  }
+  } else {
+    dir.create(ex_dir, recursive = TRUE, showWarnings = FALSE)
+    fpath = sprintf("https://raw.githubusercontent.com/Jeremy37/rgenie_example/master/file_list.%s.txt", name)
+    file_list = readr::read_csv(url(fpath), col_names = "path")$path
 
-  dir.create(ex_dir, recursive = TRUE, showWarnings = FALSE)
-  fpath = sprintf("https://raw.githubusercontent.com/Jeremy37/rgenie_example/master/file_list.%s.txt", name)
-  file_list = readr::read_csv(url(fpath), col_names = "path")$path
-
-  for (fpath in file_list) {
-    path_parts = strsplit(fpath, "/", fixed = T)[[1]]
-    fname = path_parts[length(path_parts)]
-    destfile = file.path(ex_dir, fname)
-    download.file(fpath, destfile, quiet = quiet)
+    for (fpath in file_list) {
+      path_parts = strsplit(fpath, "/", fixed = T)[[1]]
+      fname = path_parts[length(path_parts)]
+      destfile = file.path(ex_dir, fname)
+      download.file(fpath, destfile, quiet = quiet)
+    }
+    message(sprintf("Downloaded data for example '%s' to %s", name, ex_dir))
   }
-  message(sprintf("Downloaded data for example '%s' to %s", name, ex_dir))
 }
 
