@@ -7,9 +7,9 @@
 variance_components_plot(varcomp, split_by_fraction = F)
 }
 \arguments{
-\item{split_by_fraction}{If TRUE, then points are colored by allele fraction.}
+\item{varcomp}{Result from a call to get_variance_components.}
 
-\item{del_result}{Result from a call to deletion_analysis.}
+\item{split_by_fraction}{If TRUE, then points are colored by allele fraction.}
 }
 \value{
 Returns a ggplot object.
@@ -18,6 +18,14 @@ Returns a ggplot object.
 Plots variance components estimates for all unique alleles.
 }
 \examples{
+\dontrun{
 del_results = deletion_analysis(regions, replicates)
-variance_components_plot(del_results)
+vc = get_variance_components(del_result[[1]], replicates)
+variance_components_plot(vc)
+}
+}
+\seealso{
+\code{\link{deletion_analysis}}
+
+\code{\link{get_variance_components}}
 }

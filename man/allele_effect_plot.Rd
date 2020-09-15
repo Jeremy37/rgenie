@@ -8,14 +8,25 @@ allele_effect_plot(del_result, viewing_window = 40, max_alleles = 40)
 }
 \arguments{
 \item{del_result}{Result from a call to deletion_analysis.}
+
+\item{viewing_window}{Window on either size of the CRISPR cut site to show in the plot.}
+
+\item{max_alleles}{The maximum number of alleles to show in the plot.}
 }
 \value{
-Returns a ggplot object plotting effect sizes and confidence intervals for top alleles from a deletion analysis.
+Returns a ggplot object plotting effect sizes and confidence intervals for top alleles
+ from a deletion analysis.
+Top alleles are in decreasing order of their total read count in gDNA across replicates.
 }
 \description{
 Plots estimated effect sizes and confidence intervals for top alleles from a deletion analysis.
 }
 \examples{
+\dontrun{
 del_results = deletion_analysis(regions, replicates)
 allele_effect_plot(del_results)
+}
+}
+\seealso{
+\code{\link{deletion_analysis}}
 }

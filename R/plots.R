@@ -2,13 +2,12 @@
 
 #' Returns a list with default options for all rgenie plots, useful in calls to deletion_plots().
 #'
-#' @param del_result Result from a call to deletion_analysis and/or grep_analysis.
-#' @return Returns a ggplot object.
-#'
 #' @examples
+#' \dontrun{
 #' del_result = deletion_analysis(regions, replicates)
 #' opts = genie_plot_options()
 #' plot_list = deletion_plots(del_result, opts)
+#' }
 #' @seealso \code{\link{deletion_analysis}}
 #' @export
 #'
@@ -29,13 +28,16 @@ genie_plot_options = function() {
 
 #' Plots a summary of genie results across multiple regions.
 #'
-#' @param del_result Result from a call to deletion_analysis and/or grep_analysis.
+#' @param grep_results Result from a call to grep_analysis (or NULL).
+#' @param del_results Result from a call to deletion_analysis (or NULL).
 #' @return Returns a ggplot object.
 #'
 #' @examples
+#' \dontrun{
 #' grep_results = grep_analysis(regions, replicates)
 #' del_results = deletion_analysis(regions, replicates)
 #' experiment_summary_plot(grep_results, del_results)
+#' }
 #' @seealso \code{\link{grep_analysis}}
 #' @seealso \code{\link{deletion_analysis}}
 #' @seealso \code{\link{bind_results}}
@@ -144,12 +146,14 @@ experiment_summary_plot = function(grep_results, del_results) {
 
 
 #' Plots a summary of genie results from a grep analysis.
-#' @param del_result Result from a call to deletion_analysis and/or grep_analysis.
+#' @param grep_result Result from a call to grep_analysis.
 #' @return Returns a ggplot object.
 #'
 #' @examples
+#' \dontrun{
 #' grep_results = grep_analysis(regions, replicates)
 #' grep_summary_plot(grep_results[[1]])
+#' }
 #' @seealso \code{\link{grep_analysis}}
 #' @export
 #'
@@ -220,13 +224,19 @@ grep_summary_plot = function(grep_result) {
 #' Returns all main plots for a single deletion analysis result.
 #'
 #' @param del_result Result from a call to deletion_analysis.
+#' @param opts A list with all options needed for rgenie plotting functions.
+#' @param variance_components_plot If TRUE, then variance_components_plot() is called.
+#' @param power_plots If TRUE, then power_plots() is called.
 #' @return Returns a list of ggplot objects.
 #'
 #' @examples
+#' \dontrun{
 #' del_result = deletion_analysis(regions, replicates)
-#' deletion_plots(del_result)
-#' @seealso \code{\link{deletion_analysis}}
+#' deletion_plots(del_result, genie_plot_options())
+#' genie_plot_options
+#' }
 #' @seealso \code{\link{genie_plot_options}}
+#' @seealso \code{\link{deletion_analysis}}
 #' @seealso \code{\link{deletion_summary_plot}}
 #' @seealso \code{\link{deletion_alleles_plot}}
 #' @seealso \code{\link{deletion_profile_plot}}
@@ -273,8 +283,10 @@ deletion_plots = function(del_result,
 #' @return Returns a ggplot object with a summary of deletion analysis results for a single region.
 #'
 #' @examples
+#' \dontrun{
 #' del_result = deletion_analysis(regions, replicates)
 #' deletion_summary_plot(del_result)
+#' }
 #' @seealso \code{\link{deletion_analysis}}
 #' @export
 #'
@@ -354,11 +366,14 @@ deletion_summary_plot = function(del_result) {
 #' Plots a summary of deletion analysis replicates.
 #'
 #' @param del_result Result from a call to deletion_analysis.
+#' @param outlier_threshold A numeric threshold for the outlier score, above which replicates will be colored differently.
 #' @return Returns a ggplot object with a summary of deletion analysis replicates.
 #'
 #' @examples
+#' \dontrun{
 #' del_results = deletion_analysis(regions, replicates)
 #' replicate_summary_plot(del_results)
+#' }
 #' @seealso \code{\link{deletion_analysis}}
 #' @export
 #'
@@ -415,11 +430,14 @@ replicate_summary_plot = function(del_result,
 #' Plots quality control metrics for deletion analysis replicates.
 #'
 #' @param del_result Result from a call to deletion_analysis.
+#' @param outlier_threshold A numeric threshold for the outlier score, above which replicates will be colored differently.
 #' @return Returns a ggplot object with quality control metrics for deletion analysis replicates.
 #'
 #' @examples
+#' \dontrun{
 #' del_results = deletion_analysis(regions, replicates)
 #' replicate_qc_plot(del_results)
+#' }
 #' @seealso \code{\link{deletion_analysis}}
 #' @export
 #'
@@ -511,11 +529,17 @@ replicate_qc_plot = function(del_result,
 #' Plots estimated effect sizes and confidence intervals for top alleles from a deletion analysis.
 #'
 #' @param del_result Result from a call to deletion_analysis.
-#' @return Returns a ggplot object plotting effect sizes and confidence intervals for top alleles from a deletion analysis.
+#' @param viewing_window Window on either size of the CRISPR cut site to show in the plot.
+#' @param max_alleles The maximum number of alleles to show in the plot.
+#' @return Returns a ggplot object plotting effect sizes and confidence intervals for top alleles
+#'  from a deletion analysis.
+#' Top alleles are in decreasing order of their total read count in gDNA across replicates.
 #'
 #' @examples
+#' \dontrun{
 #' del_results = deletion_analysis(regions, replicates)
 #' allele_effect_plot(del_results)
+#' }
 #' @seealso \code{\link{deletion_analysis}}
 #' @export
 #'
@@ -702,7 +726,7 @@ variance_partition_plot = function(vp.df, residuals=T, pointColor = NA) {
 
   gg_color_hue <- function(n) {
     hues = seq(15, 375, length = n + 1)
-    hcl(h = hues, l = 65, c = 100)[1:n]
+    grDevices::hcl(h = hues, l = 65, c = 100)[1:n]
   }
   getFractionCategory = function(x) {
     if (x < 0.005) { "< 0.5%" }
@@ -744,14 +768,16 @@ variance_partition_plot = function(vp.df, residuals=T, pointColor = NA) {
 
 #' Plots variance components estimates for all unique alleles.
 #'
-#' @param del_result Result from a call to deletion_analysis.
+#' @param varcomp Result from a call to get_variance_components.
 #' @param split_by_fraction If TRUE, then points are colored by allele fraction.
 #' @return Returns a ggplot object.
 #'
 #' @examples
+#' \dontrun{
 #' del_results = deletion_analysis(regions, replicates)
 #' vc = get_variance_components(del_result[[1]], replicates)
 #' variance_components_plot(vc)
+#' }
 #' @seealso \code{\link{deletion_analysis}}
 #' @seealso \code{\link{get_variance_components}}
 #' @export
@@ -838,12 +864,15 @@ text_plot = function(text, title = NA, fontface = "plain", size = 4) {
 #' Plots unique deletion alleles and their "pileup" count profile separately for cDNA and gDNA.
 #'
 #' @param del_result Result from a call to deletion_analysis.
+#' @param viewing_window Window on either size of the CRISPR cut site to show in the plot.
 #' @param color_by A string with one of the values: "none" (default), "window", or "sharing".
 #' @return Returns a ggplot object.
 #'
 #' @examples
+#' \dontrun{
 #' del_results = deletion_analysis(regions, replicates)
 #' deletion_alleles_plot(del_results)
+#' }
 #' @seealso \code{\link{deletion_analysis}}
 #' @export
 #'
@@ -980,8 +1009,11 @@ udp_plot = function(udp.df, plot_title, cut_site, highlight_site, viewing_window
 #' @return Returns a ggplot object.
 #'
 #' @examples
+#' \dontrun{
 #' del_results = deletion_analysis(regions, replicates)
 #' deletion_profile_plot(del_results)
+#' }
+#' @seealso \code{\link{deletion_analysis}}
 #' @export
 #'
 deletion_profile_plot = function(del_result,
@@ -1161,12 +1193,20 @@ udp_to_binary = function(udp) {
 #' effect given various allele fraction and effect size combinations.
 #'
 #' @param del_result Result from a call to deletion_analysis.
-#' @param viewing_window Window on either size of the CRISPR cut site to show in the plot.
-#' @return Returns a ggplot object.
+#' @param allele_min_reads The minimum number of reads that a deletion allele must have across all replicates to be included.
+#' @param WT_fraction If specified, then the model will assume this fraction of WT reads
+#' @return Returns a list with three ggplot objects:
+#' \itemize{
+#'   \item cv_plot
+#'   \item power_plot
+#'   \item replicate_allocation_plot
+#' }
 #'
 #' @examples
+#' \dontrun{
 #' del_results = deletion_analysis(regions, replicates)
 #' power_plots(del_results)
+#' }
 #' @seealso \code{\link{deletion_analysis}}
 #' @export
 #'

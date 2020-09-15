@@ -94,6 +94,8 @@ check_regions_and_replicates = function(regions, replicates) {
 #'   site that must exactly match to identify HDR or WT reads.
 #' @param min_mapq The minimum mapping quality for reads to be included in the
 #'   analysis.
+#' @param quiet If TRUE, then no messages are printing during the analysis.
+#'
 #' @section Details: For a grep analysis, the regions parameter is a data.frame
 #'   with a format as follows. All of the column names below must be specified.
 #'   \tabular{lccccclll}{ name \tab sequence_name \tab start \tab end \tab
@@ -176,8 +178,10 @@ check_regions_and_replicates = function(regions, replicates) {
 #' }
 #'
 #' @examples
+#' \dontrun{
 #' grep_results = grep_analysis(regions, replicates)
 #' grep_summary_plot(grep_results[[1]])
+#' }
 #' @seealso \code{\link{deletion_analysis}}
 #' @seealso \code{\link{grep_summary_plot}}
 #' @export
@@ -267,7 +271,7 @@ region_grep_analysis = function(region, replicates, opts)
     output(opts, sprintf("REF sequence: %s\n", ref_sequence))
 
     # Get different reference for cDNA if specified
-    if (hasName(region, "ref_sequence_cdna") && !is_empty(region$ref_sequence_cdna)) {
+    if (utils::hasName(region, "ref_sequence_cdna") && !is_empty(region$ref_sequence_cdna)) {
       # If a different ref sequence is specified, all the following columns must also be specified.
       if (is_empty(region$sequence_name_cdna) || is_empty(region$hdr_allele_profile_cdna) || is_empty(region$wt_allele_profile_cdna)) {
         stop(sprintf("ref_sequence_cdna specified in regions file for locus %s, but not all of the following columns were specified: sequence_name_cdna, hdr_allele_profile_cdna, wt_allele_profile_cdna", region$name))
@@ -350,6 +354,8 @@ replicate_grep_analysis = function(read_seqs, hdr_seq_grep, wt_seq_grep) {
 #' @param max_mismatch_frac The maximum fraction of mismatches a read can have and be included in the analysis.
 #' @param min_aligned_bases The minimum number of aligned bases within the region of interest for a read to be included in the analysis.
 #' @param exclude_multiple_deletions If TRUE, then reads with multiple deletions will be excluded from the analysis.
+#' @param exclude_nonspanning_reads If TRUE, then reads are excluded if their alignment does not overlap the region's
+#'  highlight_site (or cut site if no highlight_site is specified)
 #' @param allele_profile If TRUE, then the result object will contain data.frames named site_profiles and mismatch_profiles, as detailed in the description below.
 #' @param del_span_start An integer that specifies the start of a window, relative to the region's highlight site, within which deletions are counted.
 #' @param del_span_end An integer that specifies the end of a window, relative to the region's highlight site, within which deletions are counted.
@@ -478,8 +484,10 @@ replicate_grep_analysis = function(read_seqs, hdr_seq_grep, wt_seq_grep) {
 #' }
 #'
 #' @examples
+#' \dontrun{
 #' del_results = deletion_analysis(regions, replicates)
 #' deletion_plots(del_results[[1]])
+#' }
 #' @seealso \code{\link{grep_analysis}}
 #' @seealso \code{\link{deletion_plots}}
 #' @seealso \code{\link{deletion_summary_plot}}
@@ -1015,22 +1023,6 @@ get_region_del_stats = function(replicate_data, replicates.df) {
 }
 
 
-#' Returns quality control statistics for results from a deletion analysis.
-#'
-#' @param del_result A data.frame defining GenIE regions.
-#' @param max_alleles Param description
-#' @param min_avg_allele_fraction Param description
-#' @param exclude_wt Param description
-#' @return Returns quality control statistics for results from a deletion analysis.
-#'
-#' @examples
-#' del_results = deletion_analysis(regions, replicates)
-#' metrics = replicate_qc_metrics(del_results[[1]])
-#' @seealso \code{\link{deletion_analysis}}
-#' @seealso \code{\link{replicate_summary_plot}}
-#' @seealso \code{\link{replicate_qc_plot}}
-#' @export
-#'
 replicate_qc_metrics = function(replicates, replicate_alleles, max_alleles = 20, min_avg_allele_fraction = 0.005, exclude_wt = FALSE) {
   # Here we get various metrics for each replicate that enable visual or automatic
   # QC. One of the key inputs is, for each replicate, the UDP fraction for the
@@ -1321,9 +1313,11 @@ fit_variance_components = function(replicate.udp.spread.df, replicates.type.df) 
 #' @param allele_min_fraction The minimum fraction of total reads that a deletion allele must have across all replications to be included.
 #' @return Returns a list with tables vp_cDNA and vp_gDNA, which partition variance according to the metadata columns that begin with "replicate_" in the 'replicates' parameter.
 #' @examples
+#' \dontrun{
 #' del_results = deletion_analysis(regions, replicates)
 #' vc = get_variance_components(del_results[[1]], replicates)
 #' variance_components_plot(vc)
+#' }
 #' @seealso \code{\link{deletion_analysis}}
 #' @seealso \code{\link{variance_components_plot}}
 #' @export
@@ -1496,9 +1490,11 @@ get_udp_stats = function(replicate_udps, dna_type, allele_min_reads) {
 #' @param WT_fraction If specified, then the model will assume this fraction of WT reads
 #' @return Returns...
 #' @examples
+#' \dontrun{
 #' del_results = deletion_analysis(regions, replicates)
 #' pwr = power_analysis(del_results[[1]], replicates)
 #' power_plots(pwr)
+#' }
 #' @seealso \code{\link{deletion_analysis}}
 #' @seealso \code{\link{power_plots}}
 #' @export
@@ -1850,13 +1846,13 @@ is_empty = function(s) {
 }
 
 check_is_del_result = function(del_result) {
-  if (!(hasName(del_result, "type") && del_result$type == "deletion_analysis")) {
+  if (!(utils::hasName(del_result, "type") && del_result$type == "deletion_analysis")) {
     stop("Input del_result object is not of type deletion_analysis.")
   }
 }
 
 check_is_grep_result = function(grep_result) {
-  if (!(hasName(grep_result, "type") && grep_result$type == "grep_analysis")) {
+  if (!(utils::hasName(grep_result, "type") && grep_result$type == "grep_analysis")) {
     stop("Input grep_result object is not of type grep_analysis.")
   }
 }
@@ -1875,8 +1871,10 @@ output = function(opts, str) {
 #' @return Returns a list containing the same tables as in an individual result,
 #' but concatenated across regions.
 #' @examples
+#' \dontrun{
 #' del_results = deletion_analysis(regions, replicates)
 #' del_tables = bind_results(del_results)
+#' }
 #' @seealso \code{\link{grep_analysis}}
 #' @seealso \code{\link{deletion_analysis}}
 #' @export
@@ -1915,15 +1913,22 @@ bind_results = function(results) {
 #' The example data is a set of BAM files for GenIE replicates.
 #'
 #' @param dir Directory where example data should be put.
+#' @param name The name of the example to download.
+#' @param overwrite If FALSE, then data are not downloaded if directory 'dir/name' already
+#'  exists. Otherwise, all data are downloaded (possibly overwriting files).
+#' @param quiet If TRUE, then no messages are printing during the analysis.
+#'
 #' @return Returns a list containing the same tables as in an individual result,
 #' but concatenated across regions.
 #' @examples
+#' \dontrun{
 #' download_example(dir = "~/genie_example", name = "MUL1")
 #' # Data are downloaded and we can run an rgenie analysis
 #' setwd("~/genie_example")
 #' regions = readr::read_tsv("mul1.genie_regions.tsv")
 #' replicates = readr::read_tsv("mul1.genie_replicates.tsv")
 #' grep_results = grep_analysis(regions, replicates)
+#' }
 #' @seealso \code{\link{grep_analysis}}
 #' @seealso \code{\link{deletion_analysis}}
 #' @export
@@ -1946,7 +1951,7 @@ download_example = function(dir = "~/genie_example", name = "MUL1", overwrite = 
       path_parts = strsplit(fpath, "/", fixed = T)[[1]]
       fname = path_parts[length(path_parts)]
       destfile = file.path(ex_dir, fname)
-      download.file(fpath, destfile, quiet = quiet)
+      utils::download.file(fpath, destfile, quiet = quiet)
     }
     message(sprintf("Downloaded data for example '%s' to %s", name, ex_dir))
   }

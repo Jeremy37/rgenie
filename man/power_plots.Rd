@@ -10,16 +10,28 @@ power_plots(del_result, allele_min_reads = 100, WT_fraction = NA)
 \arguments{
 \item{del_result}{Result from a call to deletion_analysis.}
 
-\item{viewing_window}{Window on either size of the CRISPR cut site to show in the plot.}
+\item{allele_min_reads}{The minimum number of reads that a deletion allele must have across all replicates to be included.}
+
+\item{WT_fraction}{If specified, then the model will assume this fraction of WT reads}
 }
 \value{
-Returns a ggplot object.
+Returns a list with three ggplot objects:
+\itemize{
+  \item cv_plot
+  \item power_plot
+  \item replicate_allocation_plot
+}
 }
 \description{
 Returns a set of plots summarising the expected power to detect a significant
 effect given various allele fraction and effect size combinations.
 }
 \examples{
+\dontrun{
 del_results = deletion_analysis(regions, replicates)
 power_plots(del_results)
+}
+}
+\seealso{
+\code{\link{deletion_analysis}}
 }

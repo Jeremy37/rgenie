@@ -7,7 +7,9 @@
 experiment_summary_plot(grep_results, del_results)
 }
 \arguments{
-\item{del_result}{Result from a call to deletion_analysis and/or grep_analysis.}
+\item{grep_results}{Result from a call to grep_analysis (or NULL).}
+
+\item{del_results}{Result from a call to deletion_analysis (or NULL).}
 }
 \value{
 Returns a ggplot object.
@@ -16,7 +18,16 @@ Returns a ggplot object.
 Plots a summary of genie results across multiple regions.
 }
 \examples{
+\dontrun{
 grep_results = grep_analysis(regions, replicates)
 del_results = deletion_analysis(regions, replicates)
 experiment_summary_plot(grep_results, del_results)
+}
+}
+\seealso{
+\code{\link{grep_analysis}}
+
+\code{\link{deletion_analysis}}
+
+\code{\link{bind_results}}
 }

@@ -7,7 +7,7 @@
 grep_summary_plot(grep_result)
 }
 \arguments{
-\item{del_result}{Result from a call to deletion_analysis and/or grep_analysis.}
+\item{grep_result}{Result from a call to grep_analysis.}
 }
 \value{
 Returns a ggplot object.
@@ -16,6 +16,11 @@ Returns a ggplot object.
 Plots a summary of genie results from a grep analysis.
 }
 \examples{
+\dontrun{
 grep_results = grep_analysis(regions, replicates)
-grep_summary_plot(grep_result)
+grep_summary_plot(grep_results[[1]])
+}
+}
+\seealso{
+\code{\link{grep_analysis}}
 }

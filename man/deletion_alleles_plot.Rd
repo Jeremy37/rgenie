@@ -9,6 +9,8 @@ deletion_alleles_plot(del_result, viewing_window = 40, color_by = "window")
 \arguments{
 \item{del_result}{Result from a call to deletion_analysis.}
 
+\item{viewing_window}{Window on either size of the CRISPR cut site to show in the plot.}
+
 \item{color_by}{A string with one of the values: "none" (default), "window", or "sharing".}
 }
 \value{
@@ -18,6 +20,11 @@ Returns a ggplot object.
 Plots unique deletion alleles and their "pileup" count profile separately for cDNA and gDNA.
 }
 \examples{
+\dontrun{
 del_results = deletion_analysis(regions, replicates)
 deletion_alleles_plot(del_results)
+}
+}
+\seealso{
+\code{\link{deletion_analysis}}
 }

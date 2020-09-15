@@ -6,17 +6,16 @@
 \usage{
 genie_plot_options()
 }
-\arguments{
-\item{del_result}{Result from a call to deletion_analysis and/or grep_analysis.}
-}
-\value{
-Returns a ggplot object.
-}
 \description{
 Returns a list with default options for all rgenie plots, useful in calls to deletion_plots().
 }
 \examples{
+\dontrun{
 del_result = deletion_analysis(regions, replicates)
 opts = genie_plot_options()
 plot_list = deletion_plots(del_result, opts)
+}
+}
+\seealso{
+\code{\link{deletion_analysis}}
 }

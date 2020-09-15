@@ -8,6 +8,8 @@ replicate_summary_plot(del_result, outlier_threshold = NA)
 }
 \arguments{
 \item{del_result}{Result from a call to deletion_analysis.}
+
+\item{outlier_threshold}{A numeric threshold for the outlier score, above which replicates will be colored differently.}
 }
 \value{
 Returns a ggplot object with a summary of deletion analysis replicates.
@@ -16,6 +18,11 @@ Returns a ggplot object with a summary of deletion analysis replicates.
 Plots a summary of deletion analysis replicates.
 }
 \examples{
+\dontrun{
 del_results = deletion_analysis(regions, replicates)
 replicate_summary_plot(del_results)
+}
+}
+\seealso{
+\code{\link{deletion_analysis}}
 }

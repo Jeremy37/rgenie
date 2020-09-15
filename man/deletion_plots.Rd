@@ -13,6 +13,12 @@ deletion_plots(
 }
 \arguments{
 \item{del_result}{Result from a call to deletion_analysis.}
+
+\item{opts}{A list with all options needed for rgenie plotting functions.}
+
+\item{variance_components_plot}{If TRUE, then variance_components_plot() is called.}
+
+\item{power_plots}{If TRUE, then power_plots() is called.}
 }
 \value{
 Returns a list of ggplot objects.
@@ -21,6 +27,30 @@ Returns a list of ggplot objects.
 Returns all main plots for a single deletion analysis result.
 }
 \examples{
+\dontrun{
 del_result = deletion_analysis(regions, replicates)
-deletion_plots(del_result)
+deletion_plots(del_result, genie_plot_options())
+genie_plot_options
+}
+}
+\seealso{
+\code{\link{genie_plot_options}}
+
+\code{\link{deletion_analysis}}
+
+\code{\link{deletion_summary_plot}}
+
+\code{\link{deletion_alleles_plot}}
+
+\code{\link{deletion_profile_plot}}
+
+\code{\link{replicate_summary_plot}}
+
+\code{\link{replicate_qc_plot}}
+
+\code{\link{allele_effect_plot}}
+
+\code{\link{variance_components_plot}}
+
+\code{\link{power_plots}}
 }

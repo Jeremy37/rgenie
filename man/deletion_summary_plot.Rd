@@ -16,6 +16,11 @@ Returns a ggplot object with a summary of deletion analysis results for a single
 Plots a summary of deletion analysis results for a single region.
 }
 \examples{
+\dontrun{
 del_result = deletion_analysis(regions, replicates)
 deletion_summary_plot(del_result)
+}
+}
+\seealso{
+\code{\link{deletion_analysis}}
 }

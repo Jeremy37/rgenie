@@ -8,6 +8,8 @@ replicate_qc_plot(del_result, outlier_threshold = NA)
 }
 \arguments{
 \item{del_result}{Result from a call to deletion_analysis.}
+
+\item{outlier_threshold}{A numeric threshold for the outlier score, above which replicates will be colored differently.}
 }
 \value{
 Returns a ggplot object with quality control metrics for deletion analysis replicates.
@@ -16,6 +18,11 @@ Returns a ggplot object with quality control metrics for deletion analysis repli
 Plots quality control metrics for deletion analysis replicates.
 }
 \examples{
+\dontrun{
 del_results = deletion_analysis(regions, replicates)
 replicate_qc_plot(del_results)
+}
+}
+\seealso{
+\code{\link{deletion_analysis}}
 }

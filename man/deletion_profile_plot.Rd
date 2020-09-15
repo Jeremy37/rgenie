@@ -18,6 +18,11 @@ Returns a ggplot object.
 Plots the deletion "pileup" profile separately for each replicate.
 }
 \examples{
+\dontrun{
 del_results = deletion_analysis(regions, replicates)
 deletion_profile_plot(del_results)
+}
+}
+\seealso{
+\code{\link{deletion_analysis}}
 }
