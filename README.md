@@ -31,7 +31,7 @@ the effects of different alleles on gene transcription.
 
 The plot below shows the set of alleles measured in a set of gDNA and cDNA replicates.
 
-![](https://github.com/Jeremy37/rgenie/raw/master/deletion_alleles_plot.png)
+![](https://github.com/Jeremy37/rgenie_example/raw/master/deletion_alleles_plot.png)
 
 ## Getting started
 
