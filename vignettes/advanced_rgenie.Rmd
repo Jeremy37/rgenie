@@ -24,7 +24,9 @@ First we load the MUL1 example, which targeted a 5' UTR SNP in MUL1, and has 8 c
 
 ```{r setup, message=FALSE}
 library(rgenie)
-library(tidyverse, quietly = T)
+library(readr, quietly = T) # Not required, but we use it below
+library(magrittr, quietly = T)
+
 download_example(dir = "~/genie_example", name = "MUL1")
 regions = readr::read_tsv("~/genie_example/MUL1/mul1.genie_regions.tsv")
 replicates = readr::read_tsv("~/genie_example/MUL1/mul1.genie_replicates.qc_passed.tsv")
@@ -61,7 +63,7 @@ If more than one nucleotide is specified in an allele profile, then the region t
 setwd("~/genie_example/MUL1/")
 new_hdr_allele_profile = regions$hdr_allele_profile
 substr(new_hdr_allele_profile, 132, 132) = "C"
-grep_results = grep_analysis(regions %>% mutate(hdr_allele_profile = new_hdr_allele_profile),
+grep_results = grep_analysis(regions %>% dplyr::mutate(hdr_allele_profile = new_hdr_allele_profile),
                              replicates,
                              required_match_left = 10,
                              required_match_right = 10,
@@ -184,7 +186,7 @@ The `replicates` table must have columns with names that begin with "vp_", and w
 The `get_variance_components` function returns the variance components partitioning for each unique allele (including HDR, WT, and all deletions) which has at least `allele_min_reads` across all replicates, and which comprises at least `allele_min_fraction` as a fraction of all reads. Variance components are computed separately for cDNA and gDNA.
 
 ```{r}
-vc$vp_cDNA %>% select(name, frac, extraction, Residuals, udp)
+vc$vp_cDNA %>% dplyr::select(name, frac, extraction, Residuals, udp)
 ```
 The "udp" column gives the allele profile, and "frac" is the average allele fraction across replicates.
 
