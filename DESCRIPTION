@@ -1,7 +1,7 @@
 Package: rgenie
-Title: RGenie - analysis of GenIE experiments
+Title: RGenie - Analysis of GenIE Experiments
 Version: 0.0.0.9000
-Authors@R: as.person("Jeremy Schwartzentruber <jeremy37@gmail.com> [aut, cre]")
+Authors@R: person("Jeremy Schwartzentruber <jeremy37@gmail.com> [aut, cre]")
 Description: The R package for GenIE analysis is designed to analyze the next-generation sequencing
     output from a set of GenIE experimental replicates. GenIE (genome-editing interrogation of enhancers)
     is an experimental method to evaluate the effects of individual SNPs on gene transcription. It is
@@ -13,7 +13,7 @@ Description: The R package for GenIE analysis is designed to analyze the next-ge
     The sequencing data from each replicate for each region should be aligned to either the full reference
     genome or to a locus-specific (amplicon) reference genome for analysis by RGenie.
 License: MIT + file LICENSE
-URL: http://github.com/jeremy37/rgenie
+URL: https://github.com/jeremy37/rgenie
 BugReports: https://github.com/jeremy37/rgenie/issues
 Encoding: UTF-8
 LazyData: true
