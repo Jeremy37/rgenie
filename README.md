@@ -41,4 +41,4 @@ The [rgenie in depth vignette](https://htmlpreview.github.io/?https://github.com
 
 ## Citation
 
-Cooper S, Schwartzentruber J, Bello E, Bassett A. Identification of functional transcriptional and splicing regulatory elements using GenIE. Not yet published.
+Cooper SE, Schwartzentruber J, Bello E, Coomber, EL, Bassett AR. Screening for functional transcriptional and splicing regulatory variants with GenIE. Not yet published.
