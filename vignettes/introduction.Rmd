@@ -33,9 +33,16 @@ experimental replicates are prepared for next-generation sequencing.
 
 You can install rgenie using devtools.
 
-```{r install, message=FALSE}
+```{r install, eval=FALSE, echo=TRUE}
 devtools::install_github(repo = "jeremy37/rgenie")
 ```
+
+```{r, message=FALSE}
+library(rgenie)
+library(readr, quietly = T) # Not required, but we use it below
+library(magrittr, quietly = T)
+```
+
 
 ## rgenie setup
 
@@ -47,28 +54,38 @@ details on recommended alignment methods are at the end of the vignette, but
 for now we will start with an already-aligned example.
 
 Some example data can be downloaded with a function provided in rgenie. This
-shows how to get data from a GenIE experiment targeting rs6700034, which is a 5' UTR SNP in gene
-MUL1. It downloads 8 replicates for cDNA and 4 replicates for gDNA - about
-57 Mb in a total of 24 files (12 ".bam" files and 12 ".bam.bai" files).
+shows how to get data from a GenIE experiment targeting rs6700034, which is a
+5' UTR SNP in gene MUL1. It downloads 8 replicates for cDNA and 4 replicates
+for gDNA - about 57 Mb in a total of 24 files (12 ".bam" files and 12
+".bam.bai" files).
 
-```{r download_example, message=FALSE}
-library(rgenie)
-library(readr, quietly = T) # Not required, but we use it below
-library(magrittr, quietly = T)
+```{r download_example_x, echo=FALSE, eval=FALSE}
+# Note that the get the vignette to pass CRAN's checks, we can't download data
+# as part of the vignette. What we have to do is to provide example data that
+# has the results objects already. But we would like to display to the user
+# how to do everything from the downloaded example. To do this, I echo the
+# code chunks for downloading the example, but don't run them. The results
+# should already be loaded as part of the package data.
+```
 
+```{r download_example, eval=FALSE, echo=TRUE}
 rgenie::download_example(dir = "~/genie_example", name = "MUL1")
 ```
 
-These files have been aligned to a custom amplicon reference sequence, which corresponds to the region chr1:20507983-20508157 (GRCh38).
+These files have been aligned to a custom amplicon reference sequence, which
+corresponds to the region chr1:20507983-20508157 (GRCh38).
 
 ## rgenie regions
 
 The example includes tab-separated text files defining the genie regions and
 replicates. We first load the region details into a data.frame.
 
-```{r regions}
-regions = readr::read_tsv("~/genie_example/MUL1/mul1.genie_regions.tsv")
-print(regions)
+```{r regions, eval=FALSE, echo=TRUE}
+mul1_regions = readr::read_tsv("~/genie_example/MUL1/mul1.genie_regions.tsv")
+print(mul1_regions)
+```
+```{r, echo=FALSE}
+print(mul1_regions)
 ```
 
 There are 9 required fields defining a region.
@@ -88,9 +105,9 @@ There are 9 required fields defining a region.
 Let's take a look at the WT and HDR allele profiles, which define how to identify sequencing reads that are wild-type or HDR, as well as the `ref_sequence`.
 
 ```{r}
-print(regions$wt_allele_profile)
-print(regions$hdr_allele_profile)
-print(regions$ref_sequence)
+print(mul1_regions$wt_allele_profile)
+print(mul1_regions$hdr_allele_profile)
+print(mul1_regions$ref_sequence)
 ```
 
 The allele profile must have length equal to the reference sequence, i.e. the full amplicon region. Positions which do not need to match are specified with "-". Positions that must match a particular nucleotide should be specified as upper-case A, C, G, or T.
@@ -104,9 +121,13 @@ Note that when a particular SNP is targeted, you only need to specify that singl
 
 The replicates table for the MUL1 experiment defines 8 cDNA replicates and 4 gDNA replicates.
 
-```{r replicates}
-replicates = readr::read_tsv("~/genie_example/MUL1/mul1.genie_replicates.tsv")
-print(replicates)
+```{r replicates, eval=FALSE}
+mul1_replicates = readr::read_tsv("~/genie_example/MUL1/mul1.genie_replicates.tsv")
+print(mul1_replicates)
+```
+
+```{r, echo=FALSE}
+print(mul1_replicates)
 ```
 
 | Field | Description |
@@ -118,6 +139,8 @@ print(replicates)
 
 The paths to BAM files can either be absolute paths or relative to the working directory.
 
+Don't worry about the "vp_extraction" column - it's used in a different rgenie example. Extra columns can be included in the regions or replicates files without affecting the results.
+
 
 ## Grep analysis
 
@@ -125,21 +148,21 @@ The simplest type of rgenie analysis is a grep analysis, which just matches HDR 
 
 The `grep_analysis` function requires the `regions` and `replicates` tables as input. We can specify some additional parameters for the analysis, which we have given here as the default values (except for quiet = TRUE).
 
-```{r grep_example, message=FALSE}
+```{r grep_example, eval=FALSE, echo=TRUE}
 setwd("~/genie_example/MUL1/")
-grep_results = grep_analysis(regions,
-                             replicates,
-                             required_match_left = 10,
-                             required_match_right = 10,
-                             min_mapq = 0,
-                             quiet = T)
+mul1_grep_results = grep_analysis(mul1_regions,
+                                  mul1_replicates,
+                                  required_match_left = 10,
+                                  required_match_right = 10,
+                                  min_mapq = 0,
+                                  quiet = T)
 ```
 
 `grep_analysis` returns a list with one item for each region analysed. We have given a single region in the `regions` input, but it is possible to run the grep_analysis for multiple regions, which are specified as rows in the regions table.
 
 ```{r}
-length(grep_results)
-grep_result = grep_results[[1]]
+length(mul1_grep_results)
+grep_result = mul1_grep_results[[1]]
 names(grep_result)
 ```
 
@@ -188,35 +211,35 @@ rgenie::grep_summary_plot(grep_result)
 It is very useful to plot the results, to understand your data better and to find outliers. Here we see that one of the replicates has essentially failed in sequencing - replicate **c1.1** has only 424 reads, compared with ~30,000 - 50,000 for the other replicates. For a more robust result, we should exclude this replicate and re-run the analysis (left as an exercise).
 
 ```{r}
-replicates = replicates %>% dplyr::filter(replicate != "c1.1")
+mul1_replicates = mul1_replicates %>% dplyr::filter(replicate != "c1.1")
 ```
 
 ## Deletion analysis
 
 An alignment-based deletion analysis looks at all Cas9-induced deletion alleles, in addition to the HDR and WT alleles. It can be run for one or multiple regions, similar to the grep analysis.
 
-```{r}
+```{r, eval=FALSE, echo=TRUE}
 setwd("~/genie_example/MUL1/")
-del_results = rgenie::deletion_analysis(regions,
-                                        replicates,
-                                        required_match_left = 10,
-                                        required_match_right = 10,
-                                        crispr_del_window = 100,
-                                        min_mapq = 0,
-                                        max_mismatch_frac = 0.05,
-                                        min_aligned_bases = 50,
-                                        exclude_multiple_deletions = F,
-                                        exclude_nonspanning_reads = T,
-                                        allele_profile = F,
-                                        del_span_start = -20,
-                                        del_span_end = 20,
-                                        quiet = TRUE)
+mul1_del_results = rgenie::deletion_analysis(mul1_regions,
+                                             mul1_replicates,
+                                             required_match_left = 10,
+                                             required_match_right = 10,
+                                             crispr_del_window = 100,
+                                             min_mapq = 0,
+                                             max_mismatch_frac = 0.05,
+                                             min_aligned_bases = 50,
+                                             exclude_multiple_deletions = F,
+                                             exclude_nonspanning_reads = T,
+                                             allele_profile = F,
+                                             del_span_start = -20,
+                                             del_span_end = 20,
+                                             quiet = TRUE)
 ```
 
 The main results fields are the same as for `grep_analysis`.
 
 ```{r}
-del_result = del_results[[1]]
+del_result = mul1_del_results[[1]]
 names(del_result)
 ```
 
@@ -229,7 +252,7 @@ names(del_result)
 | opts | A list containing the options that were given for the analysis. |
 | type | Has the value "grep_analysis", and is used by plotting functions that take a full grep_result list as input. |
 
-The deletion analysis also has many more output tables. We encourage you to explore these outputs yourself, which are described in more detail in the **rgenie in depth** vignette.
+The deletion analysis also has many more output tables. We encourage you to explore these outputs yourself, which are described in more detail in the **rgenie in depth** vignette (available online).
 
 The `region_stats` for a deletion_analysis differs from that for a grep_analysis. Although the result is a tidyverse tibble, we show it here in list format so that the results are easier to see.
 
@@ -345,7 +368,7 @@ The goal of GenIE is usually to screen multiple SNPs for effects on transcriptio
 This is the reason that the `grep_analysis` and `deletion_analysis` functions take in a table of regions and replicates as input. Each returns a list as a result, after conducting the analysis separately for each region. rgenie provides a plot to view a summary of results across many regions.
 
 ```{r fig.width=7, fig.height=6}
-rgenie::experiment_summary_plot(grep_results, del_results)
+rgenie::experiment_summary_plot(mul1_grep_results, mul1_del_results)
 ```
 
 Since we have used a single region in our analysis, we see only one region in the summary plot. More would be shown if the `region` table had included multiple regions (with their corresponding replicates defined in `replicates`).
@@ -353,10 +376,10 @@ Since we have used a single region in our analysis, we see only one region in th
 We can also easily merge together results to give tables across multiple regions.
 
 ```{r fig.width=7, fig.height=6}
-grep_tables = rgenie::bind_results(grep_results)
+grep_tables = rgenie::bind_results(mul1_grep_results)
 names(grep_tables)
 
-del_tables = rgenie::bind_results(del_results)
+del_tables = rgenie::bind_results(mul1_del_results)
 names(del_tables)
 ```
 
@@ -378,5 +401,5 @@ If stitching reads with FLASH, the `--allow-outies` parameter is essential, sinc
 
 ## Other documentation
 
-You may also wish to consult the **rgenie in depth** vignette.
+You may also wish to consult the **rgenie in depth** vignette (available online).
 
