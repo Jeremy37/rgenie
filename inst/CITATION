@@ -1,8 +1,7 @@
 citHeader("To cite RGenIE in publications use:")
 
 citEntry(entry = "Article",
-  title        = "Identification of functional transcriptional and splicing
-regulatory elements using GenIE",
+  title        = "Screening for functional transcriptional and splicing regulatory variants with GenIE",
   author       = personList(as.person("Jeremy Schwartzentruber")),
   journal      = "Nucleic Acids Research",
   year         = "2020",
