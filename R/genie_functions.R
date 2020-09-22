@@ -1957,3 +1957,36 @@ download_example = function(dir = "~/genie_example", name = "MUL1", overwrite = 
   }
 }
 
+
+###############################################################################
+# The below is needed so that R CMD Check doesn't produce NOTEs about global
+# variables which are actually just columns referenced with dplyr.
+utils::globalVariables(
+  c(".", "DEL_WT_ratio", "DEL_rate", "HDR_WT_ratio", "HDR_frac", "HDR_rate", "WT_frac",
+    "WT_rate", "allele_type", "as.dendrogram", "as.formula", "avg_gdna_udp_fraction",
+    "avg_mismatch_count", "avg_seq_length", "avg_udp_deviation",
+    "avg_udp_deviation_from_gDNA", "avg_udp_fraction", "cDNA_expr",
+    "cDNA_rep_fraction", "cDNA_total_count", "coefficients", "count_udp", "del_effect",
+    "del_effect_confint_hi", "del_effect_confint_lo", "del_pct", "del_rate_gDNA",
+    "del_significance", "deletion2_end", "deletion2_start", "deletion_end",
+    "deletion_start", "df_estimated", "dist", "editing_rate", "effect", "effectSize",
+    "effect_confint_hi", "effect_confint_lo", "effect_sd", "effect_size",
+    "fitcDNAUDP_CV", "fitgDNAUDP_CV", "frac", "fraction", "gDNA", "gDNA_total_count",
+    "has_any_deletion", "has_crispr_deletion", "has_deletion_in_window",
+    "has_multiple_deletions", "hclust", "hdr_effect", "hdr_effect_confint_hi",
+    "hdr_effect_confint_lo", "hdr_rate_gDNA", "hdr_significance", "is", "is_hdr_allele",
+    "is_wt_allele", "lty_dash", "median", "method", "min_gDNA_count", "mismatch_count",
+    "mismatch_profile", "nReps", "name", "nls", "num_cDNA", "num_cDNA_rep",
+    "num_deletion_reads", "num_gDNA_rep", "num_hdr_reads", "num_insertion", "num_reads",
+    "num_udps", "num_wt_reads", "outlier_score_knn", "pctvariance", "pnorm", "pos", "power",
+    "qt", "read_count", "read_count_in_window", "reads_excluded_for_minoverlap",
+    "reads_excluded_for_mismatches", "reads_excluded_for_multiple_deletions",
+    "reads_excluded_nonspanning", "region_read", "replicate_num_reads",
+    "replicate_total_reads", "replicates", "replicates.df", "sam_cigar", "sam_position",
+    "sd", "sd_cDNA_ratio", "sd_gDNA_ratio", "seq_length", "sharing", "sites_profile",
+    "spanning_read", "t.test", "total_count", "type", "type2", "type_replicate", "udp",
+    "udp_count", "udp_count_in_window", "udp_frac_cv", "udp_frac_mean", "udp_frac_sd",
+    "udp_fraction", "udp_id", "udp_mean", "udp_sd", "udp_sharing", "udp_total_reads",
+    "udpchar", "uns", "uns_conf_hi", "uns_conf_lo", "value", "var", "variable", "variance",
+    "x", "y")
+)
