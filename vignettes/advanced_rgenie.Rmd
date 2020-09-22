@@ -28,7 +28,7 @@ library(magrittr, quietly = T)
 
 First we load the MUL1 example, which targeted a 5' UTR SNP in MUL1, and has 8 cDNA and 4 gDNA PCR replicates.
 
-```{r setup, message=FALSE}
+```{r, message=FALSE}
 download_example(dir = "~/genie_example", name = "MUL1")
 regions = readr::read_tsv("~/genie_example/MUL1/mul1.genie_regions.tsv")
 replicates = readr::read_tsv("~/genie_example/MUL1/mul1.genie_replicates.tsv")
@@ -38,7 +38,7 @@ head(replicates)
 
 We remove 1 replicate that we discovered in the Introductory vignette was of poor quality.
 
-```{r setup, message=FALSE}
+```{r, message=FALSE}
 replicates = replicates %>% dplyr::filter(replicate != "c1.1")
 ```
 
