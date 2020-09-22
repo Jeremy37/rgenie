@@ -1,0 +1,13 @@
+name	replicate	type	vp_extraction	bam
+MUL1_rs6700034	c1.1	cDNA	1	MUL1_rs6700034_cDNA_rep1_pcr1.sortedByCoord.bam
+MUL1_rs6700034	c1.2	cDNA	1	MUL1_rs6700034_cDNA_rep1_pcr2.sortedByCoord.bam
+MUL1_rs6700034	c1.3	cDNA	1	MUL1_rs6700034_cDNA_rep1_pcr3.sortedByCoord.bam
+MUL1_rs6700034	c1.4	cDNA	1	MUL1_rs6700034_cDNA_rep1_pcr4.sortedByCoord.bam
+MUL1_rs6700034	c2.5	cDNA	2	MUL1_rs6700034_cDNA_rep2_pcr5.sortedByCoord.bam
+MUL1_rs6700034	c2.6	cDNA	2	MUL1_rs6700034_cDNA_rep2_pcr6.sortedByCoord.bam
+MUL1_rs6700034	c2.7	cDNA	2	MUL1_rs6700034_cDNA_rep2_pcr7.sortedByCoord.bam
+MUL1_rs6700034	c2.8	cDNA	2	MUL1_rs6700034_cDNA_rep2_pcr8.sortedByCoord.bam
+MUL1_rs6700034	g1.1	gDNA	1	MUL1_rs6700034_gDNA_rep1_pcr1.sortedByCoord.bam
+MUL1_rs6700034	g1.2	gDNA	1	MUL1_rs6700034_gDNA_rep1_pcr2.sortedByCoord.bam
+MUL1_rs6700034	g1.3	gDNA	1	MUL1_rs6700034_gDNA_rep1_pcr3.sortedByCoord.bam
+MUL1_rs6700034	g1.4	gDNA	1	MUL1_rs6700034_gDNA_rep1_pcr4.sortedByCoord.bam
