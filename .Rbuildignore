@@ -3,3 +3,5 @@
 ^doc$
 ^Meta$
 ^LICENSE\.md$
+^example_data$
+^vignettes/advanced_rgenie.Rmd$
