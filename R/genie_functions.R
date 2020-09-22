@@ -1934,7 +1934,7 @@ bind_results = function(results) {
 #' @export
 #'
 download_example = function(dir = "~/genie_example", name = "MUL1", overwrite = F, quiet = F) {
-  valid_examples = c("MUL1", "ABHD4")
+  valid_examples = c("MUL1")
   if (!(name %in% valid_examples)) {
     stop(sprintf("Name %s is not one of the available examples: {%s}", name, paste(valid_examples, collapse = ", ")))
   }
@@ -1944,7 +1944,7 @@ download_example = function(dir = "~/genie_example", name = "MUL1", overwrite = 
     message(sprintf("Example data for %s is already present. To overwrite it, set overwrite = TRUE.", name))
   } else {
     dir.create(ex_dir, recursive = TRUE, showWarnings = FALSE)
-    fpath = sprintf("https://raw.githubusercontent.com/Jeremy37/rgenie_example/master/file_list.%s.txt", name)
+    fpath = sprintf("https://raw.githubusercontent.com/Jeremy37/rgenie/master/example_data/file_list.%s.txt", name)
     file_list = readr::read_csv(url(fpath), col_names = "path")$path
 
     for (fpath in file_list) {
