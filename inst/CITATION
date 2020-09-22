@@ -12,9 +12,8 @@ regulatory elements using GenIE",
   url          = "",
 
   textVersion  =
-  paste("Sarah Cooper, Jeremy Schwartzentruber, Erica Bello, Andrew Bassett (2020).",
-        "Identification of functional transcriptional and splicing
-regulatory elements using GenIE.",
+  paste("Sarah E. Cooper, Jeremy Schwartzentruber, Erica Bello, Eve L Coomber, Andrew R. Bassett (2020).",
+        "Screening for functional transcriptional and splicing regulatory variants with GenIE.",
         "Nucleic Acids Research.",
         "")
 )
