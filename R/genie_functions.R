@@ -178,10 +178,9 @@ check_regions_and_replicates = function(regions, replicates) {
 #' }
 #'
 #' @examples
-#' \dontrun{
-#' grep_results = grep_analysis(regions, replicates)
-#' grep_summary_plot(grep_results[[1]])
-#' }
+#' # Not run since raw sequencing replicates aren't available
+#' # mul1_grep_results = grep_analysis(mul1_regions, mul1_replicates)
+#' grep_summary_plot(mul1_grep_results[[1]])
 #' @seealso \code{\link{deletion_analysis}}
 #' @seealso \code{\link{grep_summary_plot}}
 #' @export
@@ -484,10 +483,9 @@ replicate_grep_analysis = function(read_seqs, hdr_seq_grep, wt_seq_grep) {
 #' }
 #'
 #' @examples
-#' \dontrun{
-#' del_results = deletion_analysis(regions, replicates)
-#' deletion_plots(del_results[[1]])
-#' }
+#' # Not run since raw sequencing replicates aren't available
+#' # mul1_del_results = deletion_analysis(mul1_regions, mul1_replicates)
+#' deletion_plots(mul1_del_results[[1]])
 #' @seealso \code{\link{grep_analysis}}
 #' @seealso \code{\link{deletion_plots}}
 #' @seealso \code{\link{deletion_summary_plot}}
@@ -511,9 +509,9 @@ deletion_analysis = function(regions,
                              min_mapq = 0,
                              max_mismatch_frac = 0.05,
                              min_aligned_bases = 50,
-                             exclude_multiple_deletions = F,
-                             exclude_nonspanning_reads = T,
-                             allele_profile = F,
+                             exclude_multiple_deletions = FALSE,
+                             exclude_nonspanning_reads = TRUE,
+                             allele_profile = FALSE,
                              del_span_start = -20,
                              del_span_end = 20,
                              quiet = FALSE)
@@ -538,7 +536,7 @@ deletion_analysis = function(regions,
               quiet = quiet,
               qc_max_alleles = 20,  # Not currently exposed
               qc_min_avg_allele_fraction = 0.005,  # Not currently exposed
-              qc_exclude_wt = T)  # Not currently exposed
+              qc_exclude_wt = TRUE)  # Not currently exposed
   opts = check_del_opts(opts)
 
   #library(profvis)
@@ -752,7 +750,7 @@ replicate_del_analysis = function(name, replicate, type, sites, hdr_profile , wt
   #reads.df$mismatch_count = sapply(reads.df$read_chars, get_mismatch_chars_count, ref_seq_chars)  # SLOWER
   #reads.df$mismatch_count = sapply(reads.df$region_read, get_mismatch_count, ref_sequence)  # SLOWER
 
-  reads.df$spanning_read = T
+  reads.df$spanning_read = TRUE
   span_site = sites$cut_site
   if (!is.na(sites$highlight_site)) {
     span_site = sites$highlight_site
@@ -827,7 +825,7 @@ replicate_del_analysis = function(name, replicate, type, sites, hdr_profile , wt
   # make sure we only count as WT those reads which actually cover the HDR site
   reads.df$is_wt_allele[!reads.df$spanning_read] = NA
   # If the WT profile has a deletion, then these should not be counted as CRISPR deletions
-  reads.df$has_crispr_deletion[reads.df$is_wt_allele] = F
+  reads.df$has_crispr_deletion[reads.df$is_wt_allele] = FALSE
 
   n_wt_vars = sum(is_dna_letter(wt_profile_chars) & wt_profile_chars != ref_seq_chars)
   if (n_wt_vars > 0) {
@@ -835,7 +833,7 @@ replicate_del_analysis = function(name, replicate, type, sites, hdr_profile , wt
   }
 
   # Identify which reads are HDR.
-  reads.df$is_hdr_allele = F
+  reads.df$is_hdr_allele = FALSE
   if (hdr_profile != "") {
     if (nchar(hdr_profile) != region_length) {
       stop(sprintf("The HDR allele profile given has length %d, but the region size (end - start + 1) is %d", nchar(hdr_profile), region_length))
@@ -876,7 +874,7 @@ replicate_del_analysis = function(name, replicate, type, sites, hdr_profile , wt
               opts$max_mismatch_frac * 100))
   reads.df = reads.df[!exclude_for_mismatches, ]
 
-  n_wt_reads = sum(reads.df$is_wt_allele * reads.df$count, na.rm = T)
+  n_wt_reads = sum(reads.df$is_wt_allele * reads.df$count, na.rm = TRUE)
   if (n_wt_reads < 1) {
     warning("ERROR: no wild-type reads found. Check the WT allele profile. You may also want to check that your reads span the edit site, given your read length and amplicon coords.")
   } else if (n_wt_reads < 100) {
@@ -894,9 +892,9 @@ replicate_del_analysis = function(name, replicate, type, sites, hdr_profile , wt
   }
 
   counts$num_wt_reads = n_wt_reads
-  counts$num_hdr_reads = sum(reads.df$is_hdr_allele * reads.df$count, na.rm = T)
-  counts$num_deletion_reads = sum((reads.df$has_crispr_deletion & !reads.df$is_hdr_allele) * reads.df$count, na.rm = T)
-  counts$num_kept_reads = sum(reads.df$count, na.rm = T)
+  counts$num_hdr_reads = sum(reads.df$is_hdr_allele * reads.df$count, na.rm = TRUE)
+  counts$num_deletion_reads = sum((reads.df$has_crispr_deletion & !reads.df$is_hdr_allele) * reads.df$count, na.rm = TRUE)
+  counts$num_kept_reads = sum(reads.df$count, na.rm = TRUE)
 
   # Count deletion reads where the deletion is contained within a specific window
   window_start = min(region_length, max(1, span_site + opts$del_span_start))
@@ -904,7 +902,7 @@ replicate_del_analysis = function(name, replicate, type, sites, hdr_profile , wt
   reads.df$has_deletion_in_window = ( grepl("[*]", substr(reads.df$udp, window_start, window_end)) &
                                      !grepl("[*]", substr(reads.df$udp, 1, window_start)) &
                                      !grepl("[*]", substr(reads.df$udp, window_end, region_length)) )
-  counts$num_deletion_reads_in_window = sum((reads.df$has_deletion_in_window & !reads.df$is_hdr_allele) * reads.df$count, na.rm = T)
+  counts$num_deletion_reads_in_window = sum((reads.df$has_deletion_in_window & !reads.df$is_hdr_allele) * reads.df$count, na.rm = TRUE)
 
   # Aggregate reads according to their UDP
   udp.df = summarise(reads.df %>% group_by(udp),
@@ -924,7 +922,7 @@ replicate_del_analysis = function(name, replicate, type, sites, hdr_profile , wt
   counts$num_udps = nrow(udp.df)
 
   udp.df$has_edit = udp.df$has_crispr_deletion | udp.df$is_hdr_allele
-  counts$num_edit_reads = sum(udp.df$num_reads[udp.df$has_edit], na.rm = T)
+  counts$num_edit_reads = sum(udp.df$num_reads[udp.df$has_edit], na.rm = TRUE)
 
   # Order UDPs by the deletion start position and plot
   get_deletion_loc = function(i) {
@@ -1216,13 +1214,13 @@ get_uns_data = function(replicate.udp.df, replicates.df, region_name) {
     summarise(gDNA_total_count = first(gDNA_total_count),
               cDNA_total_count = first(cDNA_total_count),
               total_count = first(total_count),
-              mean_cDNA_count = mean(num_reads[type == "cDNA"], na.rm = T),
-              mean_gDNA_count = mean(num_reads[type == "gDNA"], na.rm = T),
-              cDNA_ratio = mean(num_reads[type == "cDNA"] / num_wt_reads[type == "cDNA"], na.rm = T),
-              sd_cDNA_ratio = sd(num_reads[type == "cDNA"] / num_wt_reads[type == "cDNA"], na.rm = T),
+              mean_cDNA_count = mean(num_reads[type == "cDNA"], na.rm = TRUE),
+              mean_gDNA_count = mean(num_reads[type == "gDNA"], na.rm = TRUE),
+              cDNA_ratio = mean(num_reads[type == "cDNA"] / num_wt_reads[type == "cDNA"], na.rm = TRUE),
+              sd_cDNA_ratio = sd(num_reads[type == "cDNA"] / num_wt_reads[type == "cDNA"], na.rm = TRUE),
               se_cDNA_ratio = sd_cDNA_ratio / sqrt(n()),
-              gDNA_ratio = mean(num_reads[type == "gDNA"] / num_wt_reads[type == "gDNA"], na.rm = T),
-              sd_gDNA_ratio = sd(num_reads[type == "gDNA"] / num_wt_reads[type == "gDNA"], na.rm = T),
+              gDNA_ratio = mean(num_reads[type == "gDNA"] / num_wt_reads[type == "gDNA"], na.rm = TRUE),
+              sd_gDNA_ratio = sd(num_reads[type == "gDNA"] / num_wt_reads[type == "gDNA"], na.rm = TRUE),
               se_gDNA_ratio = sd_gDNA_ratio / sqrt(n()),
               is_hdr_allele = first(is_hdr_allele),
               is_wt_allele = first(is_wt_allele),
@@ -1298,7 +1296,7 @@ fit_variance_components = function(replicate.udp.spread.df, replicates.type.df) 
   vp <- variancePartition::fitExtractVarPartModel(exprObj = replicate.udp.expr,
                                                   formula = as.formula(formulaStr),
                                                   data = replicates.type.df,
-                                                  useWeights = F)
+                                                  useWeights = FALSE)
   #View(data.frame(vp))
   vp
 }
@@ -1313,11 +1311,10 @@ fit_variance_components = function(replicate.udp.spread.df, replicates.type.df) 
 #' @param allele_min_fraction The minimum fraction of total reads that a deletion allele must have across all replications to be included.
 #' @return Returns a list with tables vp_cDNA and vp_gDNA, which partition variance according to the metadata columns that begin with "replicate_" in the 'replicates' parameter.
 #' @examples
-#' \dontrun{
-#' del_results = deletion_analysis(regions, replicates)
-#' vc = get_variance_components(del_results[[1]], replicates)
+#' # Not run since raw sequencing replicates aren't available
+#' # mul1_del_results = deletion_analysis(mul1_regions, mul1_replicates)
+#' vc = get_variance_components(mul1_del_results[[1]], mul1_replicates)
 #' variance_components_plot(vc)
-#' }
 #' @seealso \code{\link{deletion_analysis}}
 #' @seealso \code{\link{variance_components_plot}}
 #' @export
@@ -1490,11 +1487,10 @@ get_udp_stats = function(replicate_udps, dna_type, allele_min_reads) {
 #' @param WT_fraction If specified, then the model will assume this fraction of WT reads
 #' @return Returns...
 #' @examples
-#' \dontrun{
-#' del_results = deletion_analysis(regions, replicates)
-#' pwr = power_analysis(del_results[[1]], replicates)
-#' power_plots(pwr)
-#' }
+#' # Not run since raw sequencing replicates aren't available
+#' # mul1_del_results = deletion_analysis(mul1_regions, mul1_replicates)
+#' pwr = power_analysis(mul1_del_results[[1]])
+#' power_plots(mul1_del_results[[1]])
 #' @seealso \code{\link{deletion_analysis}}
 #' @seealso \code{\link{power_plots}}
 #' @export
@@ -1753,8 +1749,8 @@ get_mismatch_chars_count = function(s_chars, ref_chars) {
 }
 
 udp_ratio_estimate = function(udp.counts.df, replicates.df, numerator = "num_reads", denominator = "num_wt_reads") {
-  num_reads = udp.counts.df[, numerator, drop = T]
-  num_wt_reads = udp.counts.df[, denominator, drop = T]
+  num_reads = udp.counts.df[, numerator, drop = TRUE]
+  num_wt_reads = udp.counts.df[, denominator, drop = TRUE]
   udp.counts.df$num_reads = num_reads
   udp.counts.df$num_wt_reads = num_wt_reads
 
@@ -1805,7 +1801,7 @@ udp_ratio_estimate_welch = function(cDNA_UDP_counts, cDNA_wt_counts, gDNA_UDP_co
   tryres = tryCatch({
     res = t.test(cDNA_UDP_counts / cDNA_wt_counts,
                  gDNA_UDP_counts / gDNA_wt_counts,
-                 alternative = "two.sided", var.equal = F)
+                 alternative = "two.sided", var.equal = FALSE)
     pvalue = res$p.value
   }, error = function(e) e, warning = function(w) w)
   if (is(tryres, "error")) {
@@ -1842,7 +1838,7 @@ print_list = function(l, prefix = "    ") {
 }
 
 is_empty = function(s) {
-  ifelse(is.null(s), T, s == "")
+  ifelse(is.null(s), TRUE, s == "")
 }
 
 check_is_del_result = function(del_result) {
@@ -1871,10 +1867,9 @@ output = function(opts, str) {
 #' @return Returns a list containing the same tables as in an individual result,
 #' but concatenated across regions.
 #' @examples
-#' \dontrun{
-#' del_results = deletion_analysis(regions, replicates)
-#' del_tables = bind_results(del_results)
-#' }
+#' # Not run since raw sequencing replicates aren't available
+#' # mul1_del_results = deletion_analysis(mul1_regions, mul1_replicates)
+#' del_tables = bind_results(mul1_del_results)
 #' @seealso \code{\link{grep_analysis}}
 #' @seealso \code{\link{deletion_analysis}}
 #' @export
@@ -1933,7 +1928,7 @@ bind_results = function(results) {
 #' @seealso \code{\link{deletion_analysis}}
 #' @export
 #'
-download_example = function(dir = "~/genie_example", name = "MUL1", overwrite = F, quiet = F) {
+download_example = function(dir = "~/genie_example", name = "MUL1", overwrite = FALSE, quiet = FALSE) {
   valid_examples = c("MUL1")
   if (!(name %in% valid_examples)) {
     stop(sprintf("Name %s is not one of the available examples: {%s}", name, paste(valid_examples, collapse = ", ")))
@@ -1948,7 +1943,7 @@ download_example = function(dir = "~/genie_example", name = "MUL1", overwrite = 
     file_list = readr::read_csv(url(fpath), col_names = "path")$path
 
     for (fpath in file_list) {
-      path_parts = strsplit(fpath, "/", fixed = T)[[1]]
+      path_parts = strsplit(fpath, "/", fixed = TRUE)[[1]]
       fname = path_parts[length(path_parts)]
       destfile = file.path(ex_dir, fname)
       utils::download.file(fpath, destfile, quiet = quiet)

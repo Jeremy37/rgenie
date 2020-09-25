@@ -3,11 +3,10 @@
 #' Returns a list with default options for all rgenie plots, useful in calls to deletion_plots().
 #'
 #' @examples
-#' \dontrun{
-#' del_result = deletion_analysis(regions, replicates)
+#' # Not run since raw sequencing replicates aren't available
+#' # mul1_del_results = deletion_analysis(mul1_regions, mul1_replicates)
 #' opts = genie_plot_options()
-#' plot_list = deletion_plots(del_result, opts)
-#' }
+#' plot_list = deletion_plots(mul1_del_results[[1]], opts)
 #' @seealso \code{\link{deletion_analysis}}
 #' @export
 #'
@@ -18,7 +17,7 @@ genie_plot_options = function() {
     allele_plot_max_alleles = 40,
     variance_analysis_min_count = 100,
     variance_analysis_min_fraction = 0.001,
-    variance_plot_split_by_fraction = F,
+    variance_plot_split_by_fraction = FALSE,
     deletion_alleles_plot_color_by = "window",
     plower_plot_min_count = 100,
     plower_plot_WT_fraction = NA)
@@ -33,11 +32,10 @@ genie_plot_options = function() {
 #' @return Returns a ggplot object.
 #'
 #' @examples
-#' \dontrun{
-#' grep_results = grep_analysis(regions, replicates)
-#' del_results = deletion_analysis(regions, replicates)
-#' experiment_summary_plot(grep_results, del_results)
-#' }
+#' # Not run since raw sequencing replicates aren't available
+#' # mul1_grep_results = grep_analysis(mul1_regions, mul1_replicates)
+#' # mul1_del_results = deletion_analysis(mul1_regions, mul1_replicates)
+#' experiment_summary_plot(mul1_grep_results, mul1_del_results)
 #' @seealso \code{\link{grep_analysis}}
 #' @seealso \code{\link{deletion_analysis}}
 #' @seealso \code{\link{bind_results}}
@@ -58,7 +56,7 @@ experiment_summary_plot = function(grep_results, del_results) {
                                            plot.margin = unit(c(0.1, 0, 0.1 ,1), "cm"))
   if (!is.null(grep_results)) {
     grep_dfs = bind_results(grep_results)
-    exp_names = sapply(grep_dfs$region_stats$name, FUN = function(s) strsplit(s, ",", T)[[1]][1])
+    exp_names = sapply(grep_dfs$region_stats$name, FUN = function(s) strsplit(s, ",", TRUE)[[1]][1])
     if (any(duplicated(exp_names))) {
       exp_names = grep_dfs$region_stats$name
     }
@@ -73,14 +71,14 @@ experiment_summary_plot = function(grep_results, del_results) {
       effect_size_theme +
       ylab("HDR effect") + ggtitle("HDR effect size - grep analysis") +
       scale_fill_manual(values=c(`p >= 0.01`="grey70", `p < 0.01`="cornflowerblue", `p < 0.001`="red3")) +
-      coord_cartesian(ylim = c(0, max(1, max(grep_dfs$region_stats$effect * 1.05, na.rm = T))))
+      coord_cartesian(ylim = c(0, max(1, max(grep_dfs$region_stats$effect * 1.05, na.rm = TRUE))))
 
     hdr.df = grep_dfs$region_stats
   }
 
   if (!is.null(del_results)) {
     del_dfs = bind_results(del_results)
-    exp_names = sapply(del_dfs$region_stats$name, FUN = function(s) strsplit(s, ",", T)[[1]][1])
+    exp_names = sapply(del_dfs$region_stats$name, FUN = function(s) strsplit(s, ",", TRUE)[[1]][1])
     if (any(duplicated(exp_names))) {
       exp_names = del_dfs$region_stats$name
     }
@@ -95,7 +93,7 @@ experiment_summary_plot = function(grep_results, del_results) {
       effect_size_theme +
       ylab("HDR effect") + ggtitle("HDR effect size - alignment analysis") +
       scale_fill_manual(values=c(`p >= 0.01`="grey70", `p < 0.01`="cornflowerblue", `p < 0.001`="red3")) +
-      coord_cartesian(ylim = c(0, max(1, max(del_dfs$region_stats$hdr_effect * 1.05, na.rm = T))))
+      coord_cartesian(ylim = c(0, max(1, max(del_dfs$region_stats$hdr_effect * 1.05, na.rm = TRUE))))
 
     del_dfs$region_stats$del_significance = factor(sapply(del_dfs$region_stats$del_pval, FUN = getSignificanceStr), levels=c("p >= 0.01", "p < 0.01", "p < 0.001"))
     p.stats.del = ggplot(del_dfs$region_stats, aes(x=name, y=del_effect, fill=del_significance)) +
@@ -106,7 +104,7 @@ experiment_summary_plot = function(grep_results, del_results) {
       effect_size_theme +
       ylab("Del effect") + ggtitle("Deletion effect size") +
       scale_fill_manual(values=c(`p >= 0.01`="grey70", `p < 0.01`="cornflowerblue", `p < 0.001`="red3")) +
-      coord_cartesian(ylim = c(0, min(3, max(del_dfs$region_stats$del_effect * 1.2, na.rm = T))))
+      coord_cartesian(ylim = c(0, min(3, max(del_dfs$region_stats$del_effect * 1.2, na.rm = TRUE))))
 
     plot.df = del_dfs$region_stats %>% dplyr::select(name, HDR=hdr_rate_gDNA, NHEJ=del_rate_gDNA) %>%
       tidyr::gather(key = "type", value = "value", -name)
@@ -135,11 +133,11 @@ experiment_summary_plot = function(grep_results, del_results) {
 
   p.title = cowplot::ggdraw() + cowplot::draw_label("Experiment summary", fontface='bold')
   if (!is.null(p.grep.effect) & !is.null(p.stats.effect)) {
-    p.res = egg::ggarrange(p.title, p.grep.effect, p.stats.effect, p.stats.del, p.stats.editing, p.stats.hdr, ncol=1, heights=c(1.2,2.4,2.4,2.4,2.4,2.4), draw = F)
+    p.res = egg::ggarrange(p.title, p.grep.effect, p.stats.effect, p.stats.del, p.stats.editing, p.stats.hdr, ncol=1, heights=c(1.2,2.4,2.4,2.4,2.4,2.4), draw = FALSE)
   } else if (!is.null(p.grep.effect)) {
-    p.res = egg::ggarrange(p.title, p.grep.effect, p.stats.hdr, ncol=1, heights=c(1.2,3,3), draw = F)
+    p.res = egg::ggarrange(p.title, p.grep.effect, p.stats.hdr, ncol=1, heights=c(1.2,3,3), draw = FALSE)
   } else {
-    p.res = egg::ggarrange(p.title, p.stats.effect, p.stats.del, p.stats.editing, p.stats.hdr, ncol=1, heights=c(1.2,3,3,3,3), draw = F)
+    p.res = egg::ggarrange(p.title, p.stats.effect, p.stats.del, p.stats.editing, p.stats.hdr, ncol=1, heights=c(1.2,3,3,3,3), draw = FALSE)
   }
   p.res
 }
@@ -150,10 +148,9 @@ experiment_summary_plot = function(grep_results, del_results) {
 #' @return Returns a ggplot object.
 #'
 #' @examples
-#' \dontrun{
-#' grep_results = grep_analysis(regions, replicates)
-#' grep_summary_plot(grep_results[[1]])
-#' }
+#' # Not run since raw sequencing replicates aren't available
+#' # mul1_grep_results = grep_analysis(mul1_regions, mul1_replicates)
+#' grep_summary_plot(mul1_grep_results[[1]])
 #' @seealso \code{\link{grep_analysis}}
 #' @export
 #'
@@ -216,7 +213,7 @@ grep_summary_plot = function(grep_result) {
     ggtitle("HDR:WT ratio")
 
   p.title = cowplot::ggdraw() + cowplot::draw_label(plot_title, fontface='bold')
-  p.res = egg::ggarrange(p.title, p.stats, p.num_reads, p.hdr_wt, ncol=1, heights=c(0.5, 4.5, 1.5, 1.5), draw = F)
+  p.res = egg::ggarrange(p.title, p.stats, p.num_reads, p.hdr_wt, ncol=1, heights=c(0.5, 4.5, 1.5, 1.5), draw = FALSE)
   return(p.res)
 }
 
@@ -230,11 +227,9 @@ grep_summary_plot = function(grep_result) {
 #' @return Returns a list of ggplot objects.
 #'
 #' @examples
-#' \dontrun{
-#' del_result = deletion_analysis(regions, replicates)
-#' deletion_plots(del_result, genie_plot_options())
-#' genie_plot_options
-#' }
+#' # Not run since raw sequencing replicates aren't available
+#' # mul1_del_results = deletion_analysis(mul1_regions, mul1_replicates)
+#' deletion_plots(mul1_del_results[[1]], genie_plot_options())
 #' @seealso \code{\link{genie_plot_options}}
 #' @seealso \code{\link{deletion_analysis}}
 #' @seealso \code{\link{deletion_summary_plot}}
@@ -249,8 +244,8 @@ grep_summary_plot = function(grep_result) {
 #'
 deletion_plots = function(del_result,
                           opts = genie_plot_options(),
-                          variance_components_plot = F,
-                          power_plots = F) {
+                          variance_components_plot = FALSE,
+                          power_plots = FALSE) {
   check_is_del_result(del_result)
   plot_list = list( deletion_summary = deletion_summary_plot(del_result),
                     deletion_alleles = deletion_alleles_plot(del_result, viewing_window = opts$viewing_window, color_by = opts$deletion_alleles_plot_color_by),
@@ -283,10 +278,9 @@ deletion_plots = function(del_result,
 #' @return Returns a ggplot object with a summary of deletion analysis results for a single region.
 #'
 #' @examples
-#' \dontrun{
-#' del_result = deletion_analysis(regions, replicates)
-#' deletion_summary_plot(del_result)
-#' }
+#' # Not run since raw sequencing replicates aren't available
+#' # mul1_del_results = deletion_analysis(mul1_regions, mul1_replicates)
+#' deletion_summary_plot(mul1_del_results[[1]])
 #' @seealso \code{\link{deletion_analysis}}
 #' @export
 #'
@@ -370,10 +364,9 @@ deletion_summary_plot = function(del_result) {
 #' @return Returns a ggplot object with a summary of deletion analysis replicates.
 #'
 #' @examples
-#' \dontrun{
-#' del_results = deletion_analysis(regions, replicates)
-#' replicate_summary_plot(del_results)
-#' }
+#' # Not run since raw sequencing replicates aren't available
+#' # mul1_del_results = deletion_analysis(mul1_regions, mul1_replicates)
+#' replicate_summary_plot(mul1_del_results[[1]])
 #' @seealso \code{\link{deletion_analysis}}
 #' @export
 #'
@@ -422,7 +415,7 @@ replicate_summary_plot = function(del_result,
   p.title = cowplot::ggdraw() + cowplot::draw_label(sprintf("%s replicate summary", del_result$region$name), fontface='bold')
   #p.replicate_qc = cowplot::plot_grid(p.udp_fractions, p.udp_avg_deviation, ncol=1)
   #p.res = cowplot::plot_grid(p.title, p.replicate_qc, ncol=1, rel_heights=c(0.1, 1)) # rel_heights values control title margins
-  p.res = egg::ggarrange(p.title, p1, p2, p3, p4, ncol=1, heights=c(1,3,3,3,3), draw = F)
+  p.res = egg::ggarrange(p.title, p1, p2, p3, p4, ncol=1, heights=c(1,3,3,3,3), draw = FALSE)
   p.res
 }
 
@@ -434,10 +427,9 @@ replicate_summary_plot = function(del_result,
 #' @return Returns a ggplot object with quality control metrics for deletion analysis replicates.
 #'
 #' @examples
-#' \dontrun{
-#' del_results = deletion_analysis(regions, replicates)
-#' replicate_qc_plot(del_results)
-#' }
+#' # Not run since raw sequencing replicates aren't available
+#' # mul1_del_results = deletion_analysis(mul1_regions, mul1_replicates)
+#' replicate_qc_plot(mul1_del_results[[1]])
 #' @seealso \code{\link{deletion_analysis}}
 #' @export
 #'
@@ -461,7 +453,7 @@ replicate_qc_plot = function(del_result,
   num_udps = length(unique(replicate.udp.fractions$udp))
   p.udp_fractions = p.udp_fractions +
     geom_line() + geom_point(size=3, alpha=0.5) +
-    scale_color_manual(values = color_values, guide = F) +
+    scale_color_manual(values = color_values, guide = FALSE) +
     scale_shape_manual(values = shape_values) +
     theme_bw(10) + xlab("UDP") + ylab("UDP fraction") +
     scale_y_log10() +
@@ -520,7 +512,7 @@ replicate_qc_plot = function(del_result,
   p.title = cowplot::ggdraw() + cowplot::draw_label(sprintf("%s replicate QC", del_result$region$name), fontface='bold')
   #p.replicate_qc = cowplot::plot_grid(p.udp_fractions, p.udp_avg_deviation, ncol=1)
   #p.replicate_qc = cowplot::plot_grid(p.title, p.replicate_qc, ncol=1, rel_heights=c(0.1, 1)) # rel_heights values control title margins
-  p.replicate_qc = egg::ggarrange(p.title, p.udp_fractions, p.udp_avg_deviation, p.udp_avg_deviation_gDNA, p.outlier_scores, ncol=1, heights=c(1.5,4,4,4,4), draw = F)
+  p.replicate_qc = egg::ggarrange(p.title, p.udp_fractions, p.udp_avg_deviation, p.udp_avg_deviation_gDNA, p.outlier_scores, ncol=1, heights=c(1.5,4,4,4,4), draw = FALSE)
 
   return( p.replicate_qc )
 }
@@ -536,10 +528,9 @@ replicate_qc_plot = function(del_result,
 #' Top alleles are in decreasing order of their total read count in gDNA across replicates.
 #'
 #' @examples
-#' \dontrun{
-#' del_results = deletion_analysis(regions, replicates)
-#' allele_effect_plot(del_results)
-#' }
+#' # Not run since raw sequencing replicates aren't available
+#' # mul1_del_results = deletion_analysis(mul1_regions, mul1_replicates)
+#' allele_effect_plot(mul1_del_results[[1]])
 #' @seealso \code{\link{deletion_analysis}}
 #' @export
 #'
@@ -567,7 +558,7 @@ allele_effect_plot = function(del_result,
 
   numUDPs = nrow(udp.dels.df)
   if (numUDPs < 2) {
-    return(egg::ggarrange(text_plot("No UDPs pass the thresholds for min read counts."), top=plot_title, draw = F))
+    return(egg::ggarrange(text_plot("No UDPs pass the thresholds for min read counts."), top=plot_title, draw = FALSE))
   }
   if (!is.na(max_alleles) & numUDPs > max_alleles) {
     udp.dels.df = udp.dels.df %>% .[1:max_alleles,]
@@ -597,7 +588,7 @@ allele_effect_plot = function(del_result,
 
   p.dendro = ggplot() +
     geom_segment(aes(x = ggdendro::segment(ddata)$x, y = ggdendro::segment(ddata)$y, xend = ggdendro::segment(ddata)$xend, yend = ggdendro::segment(ddata)$yend)) +
-    coord_cartesian(xlim=c(min(plot.gather.df$id), max(plot.gather.df$id)), ylim=c(view_start, view_end), default = T) +
+    coord_cartesian(xlim=c(min(plot.gather.df$id), max(plot.gather.df$id)), ylim=c(view_start, view_end), default = TRUE) +
     ylab("") + scale_y_continuous(expand = c(0, 0), trans = "reverse") +
     coord_flip() +
     theme_bw() + theme(axis.title.y = element_blank(),
@@ -670,8 +661,8 @@ allele_effect_plot = function(del_result,
   min_uns_threshold = 0.25
   uns.plot.df$uns = sapply(uns.plot.df$uns, FUN = function(x) max(x, min_uns_threshold))
   uns.plot.df$uns_conf_lo = sapply(uns.plot.df$uns_conf_lo, FUN = function(x) max(x, 0.01))
-  max_uns_display = max(1.5, ceiling(max(uns.plot.df$uns, na.rm = T)))
-  min_uns_display = min(uns.plot.df$uns, na.rm = T)
+  max_uns_display = max(1.5, ceiling(max(uns.plot.df$uns, na.rm = TRUE)))
+  min_uns_display = min(uns.plot.df$uns, na.rm = TRUE)
 
   # Code testing different visualisation for representing confidence in UNS value
   #log2_uns_range = log2(max(uns.plot.df$uns)) - log2(min(uns.plot.df$uns))
@@ -703,7 +694,7 @@ allele_effect_plot = function(del_result,
                        panel.border = element_blank(),
                        plot.margin = unit(c(0,0,0.05,0), "cm"))
 
-  p.udp_profile = egg::ggarrange(p.dendro, p.udp, p.uns, nrow=1, ncol=3, widths=c(0.6,4,1), top = plot_title, draw = F)
+  p.udp_profile = egg::ggarrange(p.dendro, p.udp, p.uns, nrow=1, ncol=3, widths=c(0.6,4,1), top = plot_title, draw = FALSE)
   #p.udp_profile = cowplot::plot_grid(p.uns, p.udp, p.dendro, nrow=1, ncol=3, rel_widths = c(2,4,1))
   return(p.udp_profile)
 }
@@ -757,7 +748,7 @@ variance_partition_plot = function(vp.df, residuals=T, pointColor = NA) {
     scale_fill_manual(values = c("gray95"))
   #  scale_fill_manual(values = c(gg_color_hue(numVariables-1), "gray85"))
   if (is.na(pointColor)) {
-    p = p + scale_color_manual(values = c(blue="blue"), guide = F)
+    p = p + scale_color_manual(values = c(blue="blue"), guide = FALSE)
   } else if (pointColor == "fraction") {
     #p = p + scale_color_manual(values = c(rep(color, numVariables)))
     p = p + scale_color_manual(values = c("< 0.5%"="chartreuse", "< 2%"="blue", "> 2%"="red2"))
@@ -773,17 +764,16 @@ variance_partition_plot = function(vp.df, residuals=T, pointColor = NA) {
 #' @return Returns a ggplot object.
 #'
 #' @examples
-#' \dontrun{
-#' del_results = deletion_analysis(regions, replicates)
-#' vc = get_variance_components(del_result[[1]], replicates)
+#' # Not run since raw sequencing replicates aren't available
+#' # mul1_del_results = deletion_analysis(mul1_regions, mul1_replicates)
+#' vc = get_variance_components(mul1_del_results[[1]], mul1_replicates)
 #' variance_components_plot(vc)
-#' }
 #' @seealso \code{\link{deletion_analysis}}
 #' @seealso \code{\link{get_variance_components}}
 #' @export
 #'
 variance_components_plot = function(varcomp,
-                                    split_by_fraction = F) {
+                                    split_by_fraction = FALSE) {
   pointColor = NA
   if (split_by_fraction) {
     pointColor = "fraction"
@@ -869,10 +859,9 @@ text_plot = function(text, title = NA, fontface = "plain", size = 4) {
 #' @return Returns a ggplot object.
 #'
 #' @examples
-#' \dontrun{
-#' del_results = deletion_analysis(regions, replicates)
-#' deletion_alleles_plot(del_results)
-#' }
+#' # Not run since raw sequencing replicates aren't available
+#' # mul1_del_results = deletion_analysis(mul1_regions, mul1_replicates)
+#' deletion_alleles_plot(mul1_del_results[[1]])
 #' @seealso \code{\link{deletion_analysis}}
 #' @export
 #'
@@ -901,7 +890,7 @@ udp_plot = function(udp.df, plot_title, cut_site, highlight_site, viewing_window
   # We allow there to be up to 2 deletions in the UDP
   udp.df = udp.df %>% filter(has_crispr_deletion, !is.na(deletion_start))
   if (nrow(udp.df) == 0) {
-    return(egg::ggarrange(text_plot("No UDPs to plot."), top=plot_title, draw = F))
+    return(egg::ggarrange(text_plot("No UDPs to plot."), top=plot_title, draw = FALSE))
   }
   if (color_by == "none") {
     udp.df$udp_sharing = "both"
@@ -997,7 +986,7 @@ udp_plot = function(udp.df, plot_title, cut_site, highlight_site, viewing_window
     p.read_count = p.read_count + geom_vline(xintercept = cut_site, color="grey20", linetype = "longdash", alpha=0.5)
   }
   p.full = egg::ggarrange(p.read_count, p.udp_count, p.udp_dist, ncol=1, heights=c(1,1,4),
-                          top = plot_title, draw = F)
+                          top = plot_title, draw = FALSE)
   return(p.full)
 }
 
@@ -1009,10 +998,9 @@ udp_plot = function(udp.df, plot_title, cut_site, highlight_site, viewing_window
 #' @return Returns a ggplot object.
 #'
 #' @examples
-#' \dontrun{
-#' del_results = deletion_analysis(regions, replicates)
-#' deletion_profile_plot(del_results)
-#' }
+#' # Not run since raw sequencing replicates aren't available
+#' # mul1_del_results = deletion_analysis(mul1_regions, mul1_replicates)
+#' deletion_profile_plot(mul1_del_results[[1]])
 #' @seealso \code{\link{deletion_analysis}}
 #' @export
 #'
@@ -1028,21 +1016,21 @@ deletion_profile_plot = function(del_result,
   p.del_profile_pct = del_profile_internal(delprofile.udp.df,
                                            del_result$region$cut_site, del_result$region$highlight_site, viewing_window,
                                            plot_title = "Relative to all reads",
-                                           show_average = F, show_replicates = T, ratioToWT = F)
+                                           show_average = FALSE, show_replicates = TRUE, ratioToWT = FALSE)
   p.del_profile_pct = p.del_profile_pct + theme(axis.title.x=element_blank())
   p.del_profile_wtratio = del_profile_internal(delprofile.udp.df,
                                                del_result$region$cut_site, del_result$region$highlight_site, viewing_window,
                                                plot_title = "Relative to WT",
-                                               show_average = F, show_replicates = T, ratioToWT = T)
+                                               show_average = FALSE, show_replicates = TRUE, ratioToWT = TRUE)
   del_profile_title = sprintf("%s deletion profile", del_result$region$name)
   p.del_profile = egg::ggarrange(cowplot::ggdraw() + cowplot::draw_label(del_profile_title, fontface='bold'),
                                  p.del_profile_pct, p.del_profile_wtratio,
-                                 ncol=1, heights=c(0.1, 0.5, 0.5), draw = F)
+                                 ncol=1, heights=c(0.1, 0.5, 0.5), draw = FALSE)
   return(p.del_profile)
 }
 
 
-del_profile_internal = function(replicate.udp.df, cut_site, highlight_site, viewing_window = 40, plot_title = NA, show_average = T, show_replicates = T, ratioToWT = F) {
+del_profile_internal = function(replicate.udp.df, cut_site, highlight_site, viewing_window = 40, plot_title = NA, show_average = TRUE, show_replicates = TRUE, ratioToWT = FALSE) {
   if (viewing_window < 1) {
     warning("udp_plot: viewing_window should be a positive integer.")
     return(NULL)
@@ -1054,7 +1042,7 @@ del_profile_internal = function(replicate.udp.df, cut_site, highlight_site, view
     stop("getDeletionProfilePlot: One of show_average and show_replicates should be true.")
   }
   if (nrow(replicate.udp.df) == 0) {
-    return(egg::ggarrange(text_plot("No alleles to plot."), top=plot_title, draw = F))
+    return(egg::ggarrange(text_plot("No alleles to plot."), top=plot_title, draw = FALSE))
   }
   xmax = nchar(replicate.udp.df$udp[1])
   #udp.char.matrix = NULL
@@ -1071,7 +1059,7 @@ del_profile_internal = function(replicate.udp.df, cut_site, highlight_site, view
       sum(isPositionDel(udp.char.matrix, i) * cur.df$num_reads)
     }
   }
-  getDelpctDataframe = function(unique_reps.df, filterUdps = T, ratioToWT = F) {
+  getDelpctDataframe = function(unique_reps.df, filterUdps = TRUE, ratioToWT = FALSE) {
     counts.list = list()
     for (i in 1:nrow(unique_reps.df)) {
       curType = unique_reps.df[i,]$type
@@ -1203,10 +1191,9 @@ udp_to_binary = function(udp) {
 #' }
 #'
 #' @examples
-#' \dontrun{
-#' del_results = deletion_analysis(regions, replicates)
-#' power_plots(del_results)
-#' }
+#' # Not run since raw sequencing replicates aren't available
+#' # mul1_del_results = deletion_analysis(mul1_regions, mul1_replicates)
+#' power_plots(mul1_del_results[[1]])
 #' @seealso \code{\link{deletion_analysis}}
 #' @export
 #'
@@ -1242,7 +1229,7 @@ power_plots = function(del_result,
     scale_color_manual(values = c(cDNA = "red", gDNA = "blue")) +
     theme_bw() + xlab("UDP frac CV") + ylab("Density")
   p.cv_plots = egg::ggarrange(p.udpfrac_cv, p.cv_density, ncol=1, heights = c(2,1),
-                              top = sprintf("%s variance summary", del_result$region$name), draw = F)
+                              top = sprintf("%s variance summary", del_result$region$name), draw = FALSE)
 
   n_cDNA_rep = length(del_result$replicates %>% dplyr::filter(type == "cDNA") %>% .$replicate)
   n_gDNA_rep = length(del_result$replicates %>% dplyr::filter(type == "gDNA") %>% .$replicate)
@@ -1328,7 +1315,7 @@ power_plots = function(del_result,
 
   p.replicate_allocation = egg::ggarrange(replicate_allocation_plot(pwr, 0.01, showTitle=T),
                                           replicate_allocation_plot(pwr, 0.1, showTitle=F),
-                                          ncol=1, heights = c(1,1), draw = F)
+                                          ncol=1, heights = c(1,1), draw = FALSE)
 
   replicate_allocation.df = expand.grid(udp_fraction = c(0.01, 0.1), nReps = c(6, 10, 15, 25)) %>%
     group_by(nReps, udp_fraction) %>%
