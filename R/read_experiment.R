@@ -5,7 +5,7 @@ get_region_reads_from_bam = function(name, replicate, bam_file, chr, start, end,
   read_params = Rsamtools::ScanBamParam(which = region,
                                          what = c("rname", "strand", "pos", "qwidth", "cigar", "seq"),
                                          mapqFilter = min_mapq,
-                                         flag = Rsamtools::scanBamFlag(isSecondaryAlignment = F, isUnmappedQuery = F))
+                                         flag = Rsamtools::scanBamFlag(isSecondaryAlignment = FALSE, isUnmappedQuery = FALSE))
   bam_data = Rsamtools::scanBam(bam_file, param = read_params)
   return(bam_data[[1]])
 }
@@ -59,14 +59,14 @@ register_read = function(relative_pos, sam_cigar, sam_read, region_length) {
       read_status = "softclipped"
     } else if (type == 'H') {
       read_status = "hardclipped"
-      read_ok = F
+      read_ok = FALSE
       break
     } else if (type == 'I') {
       read_status = "insertion"
-      read_ok = F
+      read_ok = FALSE
       break
     } else {
-      read_ok = F
+      read_ok = FALSE
       break
     }
   }
@@ -165,7 +165,7 @@ get_aligned_reads = function(read_data, ref_sequence, start, end) {
   num_outsidewindow = 0
   for (i in 1:num_reads) {
     if (read_data$cigar[i] == "*") {
-      discard[i] = T
+      discard[i] = TRUE
       next # Ignore this read, as it doesn't have a valid CIGAR
     }
     relative_pos = read_data$pos[i] - start
