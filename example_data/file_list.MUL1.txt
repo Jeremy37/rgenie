@@ -24,4 +24,3 @@ https://github.com/Jeremy37/rgenie/raw/master/example_data/MUL1/MUL1_rs6700034_g
 https://github.com/Jeremy37/rgenie/raw/master/example_data/MUL1/MUL1_rs6700034_gDNA_rep1_pcr3.sortedByCoord.bam.bai
 https://github.com/Jeremy37/rgenie/raw/master/example_data/MUL1/MUL1_rs6700034_gDNA_rep1_pcr4.sortedByCoord.bam
 https://github.com/Jeremy37/rgenie/raw/master/example_data/MUL1/MUL1_rs6700034_gDNA_rep1_pcr4.sortedByCoord.bam.bai
-https://github.com/Jeremy37/rgenie/raw/master/example_data/MUL1/MUL1_rs6700034_cDNA_rep1_pcr1.sortedByCoord.bam
