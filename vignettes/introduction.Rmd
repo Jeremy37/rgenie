@@ -39,8 +39,8 @@ devtools::install_github(repo = "jeremy37/rgenie")
 
 ```{r, message=FALSE}
 library(rgenie)
-library(readr, quietly = T) # Not required, but we use it below
-library(magrittr, quietly = T)
+library(readr, quietly = TRUE) # Not required, but we use it below
+library(magrittr, quietly = TRUE)
 ```
 
 
@@ -155,7 +155,7 @@ mul1_grep_results = grep_analysis(mul1_regions,
                                   required_match_left = 10,
                                   required_match_right = 10,
                                   min_mapq = 0,
-                                  quiet = T)
+                                  quiet = TRUE)
 ```
 
 `grep_analysis` returns a list with one item for each region analysed. We have given a single region in the `regions` input, but it is possible to run the grep_analysis for multiple regions, which are specified as rows in the regions table.
@@ -228,9 +228,9 @@ mul1_del_results = rgenie::deletion_analysis(mul1_regions,
                                              min_mapq = 0,
                                              max_mismatch_frac = 0.05,
                                              min_aligned_bases = 50,
-                                             exclude_multiple_deletions = F,
-                                             exclude_nonspanning_reads = T,
-                                             allele_profile = F,
+                                             exclude_multiple_deletions = FALSE,
+                                             exclude_nonspanning_reads = TRUE,
+                                             allele_profile = FALSE,
                                              del_span_start = -20,
                                              del_span_end = 20,
                                              quiet = TRUE)
@@ -360,6 +360,35 @@ The allele effect plot shows the deletion profile and effect size estimates for 
 
 The number of alleles to show is based on the `max_alleles` parameter, and the top alleles are determined based on their number of reads summed across gDNA replicates. Alleles are represented such that a dot means an aligned position to the reference sequence, and a thin dash means the position is deleted.
 
+### All the plots
+
+You may often want to just get all of the available plots for a deletion analysis. You can do this by calling `deletion_plots`.
+
+```{r fig.width=7, fig.height=6}
+all_plots = rgenie::deletion_plots(del_result,
+                                   opts = genie_plot_options(),
+                                   variance_components_plot = FALSE,
+                                   power_plots = FALSE)
+
+names(all_plots)
+```
+
+Note that if you pass in a list of deletion_analysis results for multiple regions, then you will get plots for all of the regions.
+
+I won't print all of the plots again here. If you wanted to save all of the plots to a file, you could do something like the following.
+
+```{r eval=FALSE, echo=TRUE}
+pdf("genie_plots.pdf", width=7, height=6)
+print(all_plots)
+dev.off()
+```
+
+Parameters for the various plots are passed through the `opts` list. You can see the available options here.
+
+```{r}
+plot_opts = genie_plot_options()
+print(plot_opts)
+```
 
 ## Multiple regions
 
