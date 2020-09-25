@@ -22,8 +22,8 @@ If you have a question that is not covered here, please contact me at jeremy37 a
 
 ```{r setup, message=FALSE}
 library(rgenie)
-library(readr, quietly = T) # Not required, but we use it below
-library(magrittr, quietly = T)
+library(readr, quietly = TRUE) # Not required, but we use it below
+library(magrittr, quietly = TRUE)
 ```
 
 First we load the MUL1 example, which targeted a 5' UTR SNP in MUL1, and has 8 cDNA and 4 gDNA PCR replicates.
@@ -55,7 +55,7 @@ grep_results = grep_analysis(regions,
                              required_match_left = 10,
                              required_match_right = 10,
                              min_mapq = 0,
-                             quiet = T)
+                             quiet = TRUE)
 grep_result = grep_results[[1]]
 ```
 
@@ -77,7 +77,7 @@ grep_results = grep_analysis(regions %>% dplyr::mutate(hdr_allele_profile = new_
                              required_match_left = 10,
                              required_match_right = 10,
                              min_mapq = 0,
-                             quiet = T)
+                             quiet = TRUE)
 grep_result = grep_results[[1]]
 ```
 
@@ -118,7 +118,7 @@ del_results = rgenie::deletion_analysis(regions,
                                         replicates,
                                         del_span_start = -20,
                                         del_span_end = 20,
-                                        quiet = TRUE, allele_profile = T)
+                                        quiet = TRUE, allele_profile = TRUE)
 rgenie::deletion_alleles_plot(del_results[[1]])
 ```
 
