@@ -3,8 +3,9 @@
 #' Returns a list with default options for all rgenie plots, useful in calls to deletion_plots().
 #'
 #' @examples
-#' # Not run since raw sequencing replicates aren't available
-#' # mul1_del_results = deletion_analysis(mul1_regions, mul1_replicates)
+#' # Note: First run deletion_analysis()
+#' # mul1_del_results is a pre-loaded result
+#'
 #' opts = genie_plot_options()
 #' plot_list = deletion_plots(mul1_del_results[[1]], opts)
 #' @seealso \code{\link{deletion_analysis}}
@@ -32,9 +33,9 @@ genie_plot_options = function() {
 #' @return Returns a ggplot object.
 #'
 #' @examples
-#' # Not run since raw sequencing replicates aren't available
-#' # mul1_grep_results = grep_analysis(mul1_regions, mul1_replicates)
-#' # mul1_del_results = deletion_analysis(mul1_regions, mul1_replicates)
+#' # Note: First run deletion_analysis() and/or grep_analysis()
+#' # mul1_del_results and mul1_grep_results are pre-loaded
+#'
 #' experiment_summary_plot(mul1_grep_results, mul1_del_results)
 #' @seealso \code{\link{grep_analysis}}
 #' @seealso \code{\link{deletion_analysis}}
@@ -148,8 +149,9 @@ experiment_summary_plot = function(grep_results, del_results) {
 #' @return Returns a ggplot object.
 #'
 #' @examples
-#' # Not run since raw sequencing replicates aren't available
-#' # mul1_grep_results = grep_analysis(mul1_regions, mul1_replicates)
+#' # Note: First run grep_analysis()
+#' # mul1_grep_results is a pre-loaded result
+#'
 #' grep_summary_plot(mul1_grep_results[[1]])
 #' @seealso \code{\link{grep_analysis}}
 #' @export
@@ -193,7 +195,7 @@ grep_summary_plot = function(grep_result) {
   p.stats = ggplot(tibble(x=1:10, y=1:10), aes(x,y)) + geom_blank() + ggThemeBlank +
     annotation_custom(gridExtra::tableGrob(t(stats.plot.df), theme = myTableTheme), xmin=1.2, xmax=10, ymin=1, ymax=8.5) +
     annotate("text", x=1, y=10, label = summary.left, vjust = 1, hjust = 0, size = 2.9) +
-    annotate("text", x=9.5, y=10, label = summary.right, vjust = 1, hjust = 1, size = 2.9)
+    annotate("text", x=10, y=10, label = summary.right, vjust = 1, hjust = 1, size = 2.9)
 
   color_values = c(`cDNA`="firebrick1", `cDNA outlier`="orange1", `gDNA`="dodgerblue3", `gDNA outlier`="turquoise1")
   p.num_reads = ggplot(grep_result$replicate_stats, aes(x=replicate, y=num_reads, fill=type)) +
@@ -227,8 +229,9 @@ grep_summary_plot = function(grep_result) {
 #' @return Returns a list of ggplot objects.
 #'
 #' @examples
-#' # Not run since raw sequencing replicates aren't available
-#' # mul1_del_results = deletion_analysis(mul1_regions, mul1_replicates)
+#' # Note: First run deletion_analysis()
+#' # mul1_del_results is a pre-loaded result
+#'
 #' deletion_plots(mul1_del_results[[1]], genie_plot_options())
 #' @seealso \code{\link{genie_plot_options}}
 #' @seealso \code{\link{deletion_analysis}}
@@ -278,8 +281,9 @@ deletion_plots = function(del_result,
 #' @return Returns a ggplot object with a summary of deletion analysis results for a single region.
 #'
 #' @examples
-#' # Not run since raw sequencing replicates aren't available
-#' # mul1_del_results = deletion_analysis(mul1_regions, mul1_replicates)
+#' # Note: First run deletion_analysis()
+#' # mul1_del_results is a pre-loaded result
+#'
 #' deletion_summary_plot(mul1_del_results[[1]])
 #' @seealso \code{\link{deletion_analysis}}
 #' @export
@@ -364,8 +368,9 @@ deletion_summary_plot = function(del_result) {
 #' @return Returns a ggplot object with a summary of deletion analysis replicates.
 #'
 #' @examples
-#' # Not run since raw sequencing replicates aren't available
-#' # mul1_del_results = deletion_analysis(mul1_regions, mul1_replicates)
+#' # Note: First run deletion_analysis()
+#' # mul1_del_results is a pre-loaded result
+#'
 #' replicate_summary_plot(mul1_del_results[[1]])
 #' @seealso \code{\link{deletion_analysis}}
 #' @export
@@ -427,8 +432,9 @@ replicate_summary_plot = function(del_result,
 #' @return Returns a ggplot object with quality control metrics for deletion analysis replicates.
 #'
 #' @examples
-#' # Not run since raw sequencing replicates aren't available
-#' # mul1_del_results = deletion_analysis(mul1_regions, mul1_replicates)
+#' # Note: First run deletion_analysis()
+#' # mul1_del_results is a pre-loaded result
+#'
 #' replicate_qc_plot(mul1_del_results[[1]])
 #' @seealso \code{\link{deletion_analysis}}
 #' @export
@@ -528,8 +534,9 @@ replicate_qc_plot = function(del_result,
 #' Top alleles are in decreasing order of their total read count in gDNA across replicates.
 #'
 #' @examples
-#' # Not run since raw sequencing replicates aren't available
-#' # mul1_del_results = deletion_analysis(mul1_regions, mul1_replicates)
+#' # Note: First run deletion_analysis()
+#' # mul1_del_results is a pre-loaded result
+#'
 #' allele_effect_plot(mul1_del_results[[1]])
 #' @seealso \code{\link{deletion_analysis}}
 #' @export
@@ -568,6 +575,7 @@ allele_effect_plot = function(del_result,
   # matrix containing the deletion binary code
   M = as.matrix(do.call(rbind, lapply(as.list(udp.dels.df$udp), udp_to_binary)))
   M_chars = as.matrix(do.call(rbind, lapply(as.list(udp.dels.df$udp), str_to_chars)))
+  colnames(M_chars) = as.character(c(1:ncol(M_chars)))
 
   model <- hclust(dist(M))
   dhc <- as.dendrogram(model)
@@ -577,8 +585,7 @@ allele_effect_plot = function(del_result,
   udp.order.map = tibble(y = ggdendro::label(ddata)$x, udp = udp.dels.df[model$order,]$udp)
   udp.dels.df = udp.dels.df[model$order,] %>% dplyr::left_join(udp.order.map, by="udp")
 
-  plot.df = as_tibble(M_chars[model$order,])
-  colnames(plot.df) = as.character(c(1:ncol(plot.df)))
+  plot.df = as_tibble(M_chars[model$order,], )
   profileSpan = ncol(plot.df)
   plot.df$id = c(1:nrow(plot.df))
   plot.df[,"HDR allele"] = udp.dels.df$is_hdr_allele
@@ -764,8 +771,8 @@ variance_partition_plot = function(vp.df, residuals=T, pointColor = NA) {
 #' @return Returns a ggplot object.
 #'
 #' @examples
-#' # Not run since raw sequencing replicates aren't available
-#' # mul1_del_results = deletion_analysis(mul1_regions, mul1_replicates)
+#' # Note: First run deletion_analysis()
+#' # mul1_del_results is a pre-loaded result
 #' vc = get_variance_components(mul1_del_results[[1]], mul1_replicates)
 #' variance_components_plot(vc)
 #' @seealso \code{\link{deletion_analysis}}
@@ -859,8 +866,9 @@ text_plot = function(text, title = NA, fontface = "plain", size = 4) {
 #' @return Returns a ggplot object.
 #'
 #' @examples
-#' # Not run since raw sequencing replicates aren't available
-#' # mul1_del_results = deletion_analysis(mul1_regions, mul1_replicates)
+#' # Note: First run deletion_analysis()
+#' # mul1_del_results is a pre-loaded result
+#'
 #' deletion_alleles_plot(mul1_del_results[[1]])
 #' @seealso \code{\link{deletion_analysis}}
 #' @export
@@ -998,8 +1006,9 @@ udp_plot = function(udp.df, plot_title, cut_site, highlight_site, viewing_window
 #' @return Returns a ggplot object.
 #'
 #' @examples
-#' # Not run since raw sequencing replicates aren't available
-#' # mul1_del_results = deletion_analysis(mul1_regions, mul1_replicates)
+#' # Note: First run deletion_analysis()
+#' # mul1_del_results is a pre-loaded result
+#'
 #' deletion_profile_plot(mul1_del_results[[1]])
 #' @seealso \code{\link{deletion_analysis}}
 #' @export
@@ -1191,8 +1200,9 @@ udp_to_binary = function(udp) {
 #' }
 #'
 #' @examples
-#' # Not run since raw sequencing replicates aren't available
-#' # mul1_del_results = deletion_analysis(mul1_regions, mul1_replicates)
+#' # Note: First run deletion_analysis()
+#' # mul1_del_results is a pre-loaded result
+#'
 #' power_plots(mul1_del_results[[1]])
 #' @seealso \code{\link{deletion_analysis}}
 #' @export
