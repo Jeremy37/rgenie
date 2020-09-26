@@ -178,9 +178,18 @@ check_regions_and_replicates = function(regions, replicates) {
 #' }
 #'
 #' @examples
-#' # Not run since raw sequencing replicates aren't available
-#' # mul1_grep_results = grep_analysis(mul1_regions, mul1_replicates)
-#' grep_summary_plot(mul1_grep_results[[1]])
+#' # Note: to run an analysis you need BAM files from a GenIE experiment.
+#' # An example is available for download using download_example().
+#'
+#' \donttest{
+#' download_example(dir = "~/genie_example", name = "MUL1")
+#' # Data are downloaded and we can run an rgenie analysis
+#' setwd("~/genie_example/MUL1/")
+#' regions = readr::read_tsv("mul1.genie_regions.tsv")
+#' replicates = readr::read_tsv("mul1.genie_replicates.tsv")
+#' grep_results = grep_analysis(regions, replicates)
+#' grep_summary_plot(grep_results[[1]])
+#' }
 #' @seealso \code{\link{deletion_analysis}}
 #' @seealso \code{\link{grep_summary_plot}}
 #' @export
@@ -483,9 +492,18 @@ replicate_grep_analysis = function(read_seqs, hdr_seq_grep, wt_seq_grep) {
 #' }
 #'
 #' @examples
-#' # Not run since raw sequencing replicates aren't available
-#' # mul1_del_results = deletion_analysis(mul1_regions, mul1_replicates)
-#' deletion_plots(mul1_del_results[[1]])
+#' # Note: to run an analysis you need BAM files from a GenIE experiment.
+#' # An example is available for download using download_example().
+#'
+#' \donttest{
+#' download_example(dir = "~/genie_example", name = "MUL1")
+#' # Data are downloaded and we can run an rgenie analysis
+#' setwd("~/genie_example/MUL1/")
+#' regions = readr::read_tsv("mul1.genie_regions.tsv")
+#' replicates = readr::read_tsv("mul1.genie_replicates.tsv")
+#' delresults = deletion_analysis(regions, replicates)
+#' deletion_plots(delresults[[1]])
+#' }
 #' @seealso \code{\link{grep_analysis}}
 #' @seealso \code{\link{deletion_plots}}
 #' @seealso \code{\link{deletion_summary_plot}}
@@ -1311,8 +1329,9 @@ fit_variance_components = function(replicate.udp.spread.df, replicates.type.df) 
 #' @param allele_min_fraction The minimum fraction of total reads that a deletion allele must have across all replications to be included.
 #' @return Returns a list with tables vp_cDNA and vp_gDNA, which partition variance according to the metadata columns that begin with "replicate_" in the 'replicates' parameter.
 #' @examples
-#' # Not run since raw sequencing replicates aren't available
-#' # mul1_del_results = deletion_analysis(mul1_regions, mul1_replicates)
+#' # Note: First run deletion_analysis()
+#' # mul1_del_results is a pre-loaded result
+#'
 #' vc = get_variance_components(mul1_del_results[[1]], mul1_replicates)
 #' variance_components_plot(vc)
 #' @seealso \code{\link{deletion_analysis}}
@@ -1487,8 +1506,9 @@ get_udp_stats = function(replicate_udps, dna_type, allele_min_reads) {
 #' @param WT_fraction If specified, then the model will assume this fraction of WT reads
 #' @return Returns...
 #' @examples
-#' # Not run since raw sequencing replicates aren't available
-#' # mul1_del_results = deletion_analysis(mul1_regions, mul1_replicates)
+#' # Note: First run deletion_analysis()
+#' # mul1_del_results is a pre-loaded result
+#'
 #' pwr = power_analysis(mul1_del_results[[1]])
 #' power_plots(mul1_del_results[[1]])
 #' @seealso \code{\link{deletion_analysis}}
@@ -1867,8 +1887,9 @@ output = function(opts, str) {
 #' @return Returns a list containing the same tables as in an individual result,
 #' but concatenated across regions.
 #' @examples
-#' # Not run since raw sequencing replicates aren't available
-#' # mul1_del_results = deletion_analysis(mul1_regions, mul1_replicates)
+#' # Note: First run deletion_analysis()
+#' # mul1_del_results is a pre-loaded result
+#'
 #' del_tables = bind_results(mul1_del_results)
 #' @seealso \code{\link{grep_analysis}}
 #' @seealso \code{\link{deletion_analysis}}
@@ -1916,10 +1937,10 @@ bind_results = function(results) {
 #' @return Returns a list containing the same tables as in an individual result,
 #' but concatenated across regions.
 #' @examples
-#' \dontrun{
+#' \donttest{
 #' download_example(dir = "~/genie_example", name = "MUL1")
 #' # Data are downloaded and we can run an rgenie analysis
-#' setwd("~/genie_example")
+#' setwd("~/genie_example/MUL1/")
 #' regions = readr::read_tsv("mul1.genie_regions.tsv")
 #' replicates = readr::read_tsv("mul1.genie_replicates.tsv")
 #' grep_results = grep_analysis(regions, replicates)
@@ -1928,7 +1949,7 @@ bind_results = function(results) {
 #' @seealso \code{\link{deletion_analysis}}
 #' @export
 #'
-download_example = function(dir = "~/genie_example", name = "MUL1", overwrite = FALSE, quiet = FALSE) {
+download_example = function(dir, name = "MUL1", overwrite = FALSE, quiet = FALSE) {
   valid_examples = c("MUL1")
   if (!(name %in% valid_examples)) {
     stop(sprintf("Name %s is not one of the available examples: {%s}", name, paste(valid_examples, collapse = ", ")))
