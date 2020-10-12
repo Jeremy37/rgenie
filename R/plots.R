@@ -232,7 +232,6 @@ grep_summary_plot = function(grep_result) {
 #' # Note: First run deletion_analysis()
 #' # mul1_del_results is a pre-loaded result
 #'
-#'
 #' deletion_plots(mul1_del_results[[1]], genie_plot_options())
 #' @seealso \code{\link{genie_plot_options}}
 #' @seealso \code{\link{deletion_analysis}}

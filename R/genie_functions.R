@@ -1329,11 +1329,14 @@ fit_variance_components = function(replicate.udp.spread.df, replicates.type.df) 
 #' @param allele_min_fraction The minimum fraction of total reads that a deletion allele must have across all replications to be included.
 #' @return Returns a list with tables vp_cDNA and vp_gDNA, which partition variance according to the metadata columns that begin with "replicate_" in the 'replicates' parameter.
 #' @examples
+#' \donttest{
 #' # Note: First run deletion_analysis()
+#' # The below isn't run since it can take 10+ seconds to run
 #' # mul1_del_results is a pre-loaded result
 #'
 #' vc = get_variance_components(mul1_del_results[[1]], mul1_replicates)
 #' variance_components_plot(vc)
+#' }
 #' @seealso \code{\link{deletion_analysis}}
 #' @seealso \code{\link{variance_components_plot}}
 #' @export
@@ -1863,13 +1866,13 @@ is_empty = function(s) {
 
 check_is_del_result = function(del_result) {
   if (!(utils::hasName(del_result, "type") && del_result$type == "deletion_analysis")) {
-    stop("Input del_result object is not of type deletion_analysis.")
+    stop("Input del_result object is not of type deletion_analysis. Do you have a list of deletion results? If so you need to pass e.g. del_results[[1]].")
   }
 }
 
 check_is_grep_result = function(grep_result) {
   if (!(utils::hasName(grep_result, "type") && grep_result$type == "grep_analysis")) {
-    stop("Input grep_result object is not of type grep_analysis.")
+    stop("Input grep_result object is not of type grep_analysis. Do you have a list of grep results? If so you need to pass e.g. grep_results[[1]].")
   }
 }
 
