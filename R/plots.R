@@ -232,6 +232,7 @@ grep_summary_plot = function(grep_result) {
 #' # Note: First run deletion_analysis()
 #' # mul1_del_results is a pre-loaded result
 #'
+#'
 #' deletion_plots(mul1_del_results[[1]], genie_plot_options())
 #' @seealso \code{\link{genie_plot_options}}
 #' @seealso \code{\link{deletion_analysis}}
@@ -771,10 +772,14 @@ variance_partition_plot = function(vp.df, residuals=T, pointColor = NA) {
 #' @return Returns a ggplot object.
 #'
 #' @examples
+#' \donttest{
 #' # Note: First run deletion_analysis()
+#' # The below isn't run since it can take 10+ seconds to run
+#'
 #' # mul1_del_results is a pre-loaded result
 #' vc = get_variance_components(mul1_del_results[[1]], mul1_replicates)
 #' variance_components_plot(vc)
+#' }
 #' @seealso \code{\link{deletion_analysis}}
 #' @seealso \code{\link{get_variance_components}}
 #' @export
