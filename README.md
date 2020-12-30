@@ -41,4 +41,10 @@ The [rgenie in depth vignette](https://htmlpreview.github.io/?https://github.com
 
 ## Citation
 
-Cooper SE, Schwartzentruber J, Bello E, Coomber EL, Bassett AR. Screening for functional transcriptional and splicing regulatory variants with GenIE. Not yet published.
+Sarah E Cooper, Jeremy Schwartzentruber, Erica Bello, Eve L Coomber, Andrew R Bassett, [Screening for functional transcriptional and splicing regulatory variants with GenIE](https://doi.org/10.1093/nar/gkaa960), *Nucleic Acids Research*, Volume 48, Issue 22, 16 December 2020.
+
+## Contact
+
+Feel free to submit an issue on github, or contact me:
+
+jeremy37 at gmail dot com
