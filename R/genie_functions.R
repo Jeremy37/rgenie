@@ -26,8 +26,8 @@
 #'   wild-type (WT) reads, and an alignment-based analysis, which uses all
 #'   Cas9-generated alleles, including deletions. The analysis is run for a
 #'   given \strong{region}, which must have multiple \strong{replicates} for
-#'   both cDNA and gDNA. These analyses take as input a data.frame defining the
-#'   region, and a data.frame defining replicates.
+#'   both cDNA (or ATAC) and gDNA. These analyses take as input a data.frame
+#'   defining the region, and a data.frame defining replicates.
 #'
 #'   The result of an rgenie analysis is a list object with multiple tables,
 #'   which depend on whether a grep or deletion analyses was done. Plotting
@@ -36,12 +36,12 @@
 #' @docType package
 #' @name rgenie
 #' @seealso \code{\link{grep_analysis}}
-#' @seealso \code{\link{deletion_analysis}}
+#' @seealso \code{\link{alignment_analysis}}
 NULL
 
 
 # Checks that the options are valid, and fills in any needed additional opts
-check_del_opts = function(opts) {
+check_alignment_analysis_opts = function(opts) {
   if (is.null(opts$crispr_del_window) || opts$crispr_del_window < 1) {
     stop("Option 'crispr_del_window' must have a positive value.")
   }
@@ -54,7 +54,7 @@ check_del_opts = function(opts) {
 check_main_opts = function(opts) {
   if (is.null(opts$required_match_left) || is.null(opts$required_match_right) ||
       opts$required_match_left < 1 || opts$required_match_right < 1) {
-    stop("Options 'required_match_left' abd 'required_match_right' must have positive values.")
+    stop("Options 'required_match_left' and 'required_match_right' must have positive values.")
   }
   return(opts)
 }
@@ -74,8 +74,14 @@ check_regions_and_replicates = function(regions, replicates) {
       stop(sprintf("Region %s: not all replicates have distinct names. It will be impossible to distinguish results in output files that relate to specific replicates.", region_name))
     }
   }
-  if (!all(grepl("cDNA|gDNA", replicates$type))) {
-    stop("All replicates must have column 'type' equal to either 'cDNA' or 'gDNA'.")
+  if (!all(grepl("CDNA|ATAC|GDNA", str_to_upper(replicates$type)))) {
+    stop("All replicates must have column 'type' equal to either 'cDNA', 'gDNA', or 'ATAC'.")
+  }
+  any_cDNA_rep = any(grepl("CDNA", str_to_upper(replicates$type)))
+  #any_gDNA_rep = any(grepl("GDNA", str_to_upper(replicates$type)))
+  any_ATAC_rep = any(grepl("ATAC", str_to_upper(replicates$type)))
+  if (any_cDNA_rep && any_ATAC_rep) {
+    stop("Regions describes both cDNA and ATAC replicates. Only one type should be used for a given region analysis.")
   }
 }
 
@@ -84,7 +90,7 @@ check_regions_and_replicates = function(regions, replicates) {
 #'
 #' For each replicate associated with an input region, \code{grep_analysis}
 #' searches for alleles matching the HDR or WT sequences, and returns statistics
-#' that indicate whether the HDR:WT ratio differs in cDNA and gDNA.
+#' that indicate whether the HDR:WT ratio differs in cDNA (or ATAC) and gDNA.
 #'
 #' @param regions A data.frame defining GenIE regions.
 #' @param replicates A data.frame defining GenIE replicates.
@@ -143,11 +149,14 @@ check_regions_and_replicates = function(regions, replicates) {
 #'   will be used. \cr
 #'   \strong{replicate} \tab an ID for the replicate, which must
 #'   be unique among replicates for the region. \cr
-#'   \strong{type} \tab Must have the value "cDNA" or "gDNA", indicating
-#'   whether a given replicate contains data for cDNA or gDNA. \cr
+#'   \strong{type} \tab Must have the value "cDNA", "ATAC", or "gDNA", indicating
+#'   whether a given replicate contains data for cDNA, ATAC, or gDNA. \cr
 #'   \strong{bam} \tab the path (relative to the working directory) to
 #'   a BAM file with sequencing reads for the replicate. \cr
 #' }
+#'
+#' Either cDNA or ATAC replicates should be given, but not both for a single
+#' region.
 #'
 #' Statistics can only be computed if there are at least 2 replicates of each
 #' type (cDNA and gDNA). Replicates are matched to the region based on the
@@ -190,7 +199,7 @@ check_regions_and_replicates = function(regions, replicates) {
 #' grep_results = grep_analysis(regions, replicates)
 #' grep_summary_plot(grep_results[[1]])
 #' }
-#' @seealso \code{\link{deletion_analysis}}
+#' @seealso \code{\link{alignment_analysis}}
 #' @seealso \code{\link{grep_summary_plot}}
 #' @export
 #'
@@ -201,12 +210,22 @@ grep_analysis = function(regions,
                          min_mapq = 0,
                          quiet = FALSE)
 {
+  # Ensure consistent case for cDNA and ATAC
+  replicates$type = gsub("cdna", "cDNA", ignore.case=T, replicates$type)
+  replicates$type = gsub("atac", "ATAC", ignore.case=T, replicates$type)
+  replicates$type = gsub("gdna", "gDNA", ignore.case=T, replicates$type)
+
   check_regions_and_replicates(regions, replicates)
   replicates$replicate = as.character(replicates$replicate)
   region_names = unique(regions$name)
+  analysis_type = "cDNA"
+  if (any(grepl("ATAC", replicates$type))) {
+    analysis_type = "ATAC"
+  }
 
   opts = list(regions,
               replicates,
+              analysis_type = analysis_type,
               required_match_left = required_match_left,
               required_match_right = required_match_right,
               min_mapq = min_mapq,
@@ -238,6 +257,23 @@ grep_analysis = function(regions,
 }
 
 
+get_grep_sequence = function(profile_chars, ref_chars, required_match_left, required_match_right) {
+  #profile_is_letter = isDNALetter(profile_chars)
+  profile_pos_defined = profile_chars != "-"
+  char_positions = which(profile_pos_defined)
+  minpos = max(1, min(char_positions) - required_match_left)
+  maxpos = min(length(ref_chars), max(char_positions) + required_match_right)
+  # For any deleted profile chars, add chars on the left and/or right to
+  # make up to the same length
+  nDels = sum(profile_chars == '*')
+  minpos = minpos - ceiling(nDels / 2)
+  maxpos = maxpos + floor(nDels / 2)
+  grep_chars = ref_chars
+  grep_chars[profile_pos_defined] = profile_chars[profile_pos_defined]
+  seq = paste(grep_chars[minpos:maxpos], collapse = "")
+  gsub("*", "", seq, fixed = T)
+}
+
 # Runs a GenIE grep analysis for a single region and its replicates
 region_grep_analysis = function(region, replicates, opts)
 {
@@ -249,21 +285,17 @@ region_grep_analysis = function(region, replicates, opts)
   ref_sequence = str_to_upper(region$ref_sequence)
   sequence_name = region$sequence_name
 
-  hdr_profile_chars = strsplit(hdr_profile, "")[[1]]
+  hdr_profile_chars = strsplit(hdr_profile, "")[[1]] # Get as character vector
   wt_profile_chars = strsplit(wt_profile, "")[[1]]
   ref_seq_chars = strsplit(ref_sequence, "")[[1]]
-
-  get_grep_sequence = function(profile_chars, ref_chars) {
-    profile_is_letter = is_dna_letter(profile_chars)
-    char_positions = which(profile_is_letter)
-    minpos = max(1, min(char_positions) - opts$required_match_left)
-    maxpos = min(length(ref_chars), max(char_positions) + opts$required_match_right)
-    grep_chars = ref_chars
-    grep_chars[profile_is_letter] = profile_chars[profile_is_letter]
-    paste(grep_chars[minpos:maxpos], collapse = "")
+  hdr_seq_grep = get_grep_sequence(hdr_profile_chars, ref_seq_chars, opts$required_match_left, opts$required_match_right)
+  wt_seq_grep = get_grep_sequence(wt_profile_chars, ref_seq_chars, opts$required_match_left, opts$required_match_right)
+  # If there are ambiguous bases, make a set of sequences we should be searching for
+  hdr_grep_set = hdr_seq_grep
+  if (grepl("B|D|H|V", hdr_seq_grep)) {
+    hdr_grep_set = get_hdr_profiles(hdr_seq_grep)
   }
-  hdr_seq_grep = get_grep_sequence(hdr_profile_chars, ref_seq_chars)
-  wt_seq_grep = get_grep_sequence(wt_profile_chars, ref_seq_chars)
+
   output(opts, sprintf("HDR grep sequence: %s\n", hdr_seq_grep))
   output(opts, sprintf("WT grep sequence:  %s\n", wt_seq_grep))
 
@@ -274,8 +306,8 @@ region_grep_analysis = function(region, replicates, opts)
     type = replicates$type[i]
 
     output(opts, sprintf("\n\nAnalysing region %s, replicate %s, file %s\n", region$name, replicate, bam_file, region$sequence_name))
-    output(opts, sprintf("HDR allele: %s\n", hdr_profile))
-    output(opts, sprintf("WT allele:  %s\n", wt_profile))
+    output(opts, sprintf("HDR allele:   %s\n", hdr_profile))
+    output(opts, sprintf("WT allele:    %s\n", wt_profile))
     output(opts, sprintf("REF sequence: %s\n", ref_sequence))
 
     # Get different reference for cDNA if specified
@@ -298,8 +330,8 @@ region_grep_analysis = function(region, replicates, opts)
     }
 
     result = replicate_grep_analysis(read_seqs = read_data$seq,
-                                     hdr_seq_grep = hdr_seq_grep,
-                                     wt_seq_grep = wt_seq_grep)
+                                     wt_seq_grep = wt_seq_grep,
+                                     hdr_grep_set = hdr_grep_set)
     result$name = region$name
     result$replicate = replicate
     result$type = type
@@ -315,7 +347,7 @@ region_grep_analysis = function(region, replicates, opts)
   # Summary of stats from the propagation of errors method
   hdr_ratio_res = NULL
   counts.gDNA = counts.df %>% filter(type == "gDNA")
-  counts.cDNA = counts.df %>% filter(type == "cDNA")
+  counts.cDNA = counts.df %>% filter(grepl("cDNA|ATAC", type))
   if (nrow(counts.gDNA) < 2 | nrow(counts.cDNA) < 2) {
     warning("Unable to calculate stats with < 2 replicates")
   } else {
@@ -333,10 +365,18 @@ region_grep_analysis = function(region, replicates, opts)
 
 
 # Gets allele counts with grep for a single replicate
-replicate_grep_analysis = function(read_seqs, hdr_seq_grep, wt_seq_grep) {
+replicate_grep_analysis = function(read_seqs, wt_seq_grep, hdr_grep_set) {
   read_seqs_char = as.character(read_seqs)
-  hdr_read_count = sum(sapply(read_seqs_char, FUN = function(s) grepl(hdr_seq_grep, s, fixed=T)))
-  wt_read_count = sum(sapply(read_seqs_char, FUN = function(s) grepl(wt_seq_grep, s, fixed=T)))
+
+  read_is_hdr = sapply(read_seqs_char, FUN = function(s) { any(sapply(hdr_grep_set, FUN = function(pat) grepl(pat, s, fixed=T))) })
+  read_is_wt = sapply(read_seqs_char, FUN = function(s) grepl(wt_seq_grep, s, fixed=T))
+  if (any(read_is_hdr & read_is_wt)) {
+    warning(sprintf("Found %d read(s) classified as HDR and WT. Please check your HDR & WT input sequences. These will be marked as neither HDR nor WT.", sum(read_is_hdr & read_is_wt)))
+    read_is_hdr[read_is_hdr & read_is_wt] = F
+    read_is_wt[read_is_hdr & read_is_wt] = F
+  }
+  hdr_read_count = sum(read_is_hdr)
+  wt_read_count = sum(read_is_wt)
   return(list(num_reads = length(read_seqs_char),
               num_hdr_reads = hdr_read_count,
               num_wt_reads = wt_read_count))
@@ -345,11 +385,11 @@ replicate_grep_analysis = function(read_seqs, hdr_seq_grep, wt_seq_grep) {
 
 #' Alignment-based GenIE analysis
 #'
-#' For each replicate associated with an input region, \code{deletion_analysis}
+#' For each replicate associated with an input region, \code{alignment_analysis}
 #' identifies HDR or WT sequences, as well as deletion alleles, and returns
 #' statistics that indicate for every allele whether the allele:WT ratio
-#' differs in cDNA and gDNA. Statistics are also computed for deletion alleles
-#' aggregated together.
+#' differs in cDNA (or ATAC) and gDNA. Statistics are also computed for deletion
+#' alleles aggregated together.
 #'
 #' @param regions A data.frame defining GenIE regions.
 #' @param replicates A data.frame defining GenIE replicates.
@@ -369,7 +409,7 @@ replicate_grep_analysis = function(read_seqs, hdr_seq_grep, wt_seq_grep) {
 #' @param del_span_end An integer that specifies the end of a window, relative to the region's highlight site, within which deletions are counted.
 #' @param quiet If TRUE, then no messages are printing during the analysis.
 #'
-#' @section Details: For a deletion analysis, the regions parameter is a data.frame
+#' @section Details: For a alignment analysis, the regions parameter is a data.frame
 #'   with a format as follows. All of the column names below must be specified.
 #'   \tabular{lccccclll}{ name \tab sequence_name \tab start \tab end \tab
 #'   highlight_site \tab cut_site \tab hdr_allele_profile \tab wt_allele_profile
@@ -435,7 +475,7 @@ replicate_grep_analysis = function(read_seqs, hdr_seq_grep, wt_seq_grep) {
 #'   \strong{region} \tab 	Details of the input region the result corresponds to. \cr
 #'   \strong{replicates} \tab Details of the input replicates the result corresponds to. \cr
 #'   \strong{opts} \tab A list containing the options that were given for the analysis. \cr
-#'   \strong{type} \tab Has the value “deletion_analysis”, and is used by plotting functions that take a full del_result list as input. \cr
+#'   \strong{type} \tab Has the value “alignment_analysis”, and is used by plotting functions that take a full alignment_result list as input. \cr
 #' }
 #'
 #' The main output of interest is the `region_stats` field, which is a one-row data.frame with the following values:
@@ -462,7 +502,7 @@ replicate_grep_analysis = function(read_seqs, hdr_seq_grep, wt_seq_grep) {
 #' deletions that are contained within a window around the `highlight_site` (defined in
 #' the region input), the extent of which is determined by `crispr_del_window` parameter.
 #'
-#' @section Additional fields: The deletion_analysis result object additionally has the following fields:
+#' @section Additional fields: The alignment_analysis result object additionally has the following fields:
 #' \tabular{rl}{
 #'   \strong{replicate_qc} \tab A data.frame of summary information for each replicate,
 #'   with counts of reads in different categories, editing rates per replicate, and
@@ -501,8 +541,8 @@ replicate_grep_analysis = function(read_seqs, hdr_seq_grep, wt_seq_grep) {
 #' setwd("~/genie_example/MUL1/")
 #' regions = readr::read_tsv("mul1.genie_regions.tsv")
 #' replicates = readr::read_tsv("mul1.genie_replicates.tsv")
-#' delresults = deletion_analysis(regions, replicates)
-#' deletion_plots(delresults[[1]])
+#' alignment_results = alignment_analysis(regions, replicates)
+#' deletion_plots(alignment_results[[1]])
 #' }
 #' @seealso \code{\link{grep_analysis}}
 #' @seealso \code{\link{deletion_plots}}
@@ -510,6 +550,7 @@ replicate_grep_analysis = function(read_seqs, hdr_seq_grep, wt_seq_grep) {
 #' @seealso \code{\link{experiment_summary_plot}}
 #' @seealso \code{\link{deletion_alleles_plot}}
 #' @seealso \code{\link{deletion_profile_plot}}
+#' @seealso \code{\link{aligned_read_profile_plots}}
 #' @seealso \code{\link{replicate_summary_plot}}
 #' @seealso \code{\link{replicate_qc_plot}}
 #' @seealso \code{\link{allele_effect_plot}}
@@ -519,7 +560,7 @@ replicate_grep_analysis = function(read_seqs, hdr_seq_grep, wt_seq_grep) {
 #' @seealso \code{\link{bind_results}}
 #' @export
 #'
-deletion_analysis = function(regions,
+alignment_analysis = function(regions,
                              replicates,
                              required_match_left = 10,
                              required_match_right = 10,
@@ -534,12 +575,21 @@ deletion_analysis = function(regions,
                              del_span_end = 20,
                              quiet = FALSE)
 {
+  # Ensure consistent case for cDNA and ATAC
+  replicates$type = gsub("cDNA", "cDNA", ignore.case=T, replicates$type)
+  replicates$type = gsub("ATAC", "ATAC", ignore.case=T, replicates$type)
+
   check_regions_and_replicates(regions, replicates)
   replicates$replicate = as.character(replicates$replicate)
   region_names = unique(regions$name)
+  analysis_type = "cDNA"
+  if (any(grepl("ATAC", replicates$type))) {
+    analysis_type = "ATAC"
+  }
 
   opts = list(regions = regions,
               replicates = replicates,
+              analysis_type = analysis_type,
               required_match_left = required_match_left,
               required_match_right = required_match_right,
               crispr_del_window = crispr_del_window,
@@ -555,12 +605,12 @@ deletion_analysis = function(regions,
               qc_max_alleles = 20,  # Not currently exposed
               qc_min_avg_allele_fraction = 0.005,  # Not currently exposed
               qc_exclude_wt = TRUE)  # Not currently exposed
-  opts = check_del_opts(opts)
+  opts = check_alignment_analysis_opts(opts)
 
   #library(profvis)
   #profvis({
   #})
-  del_results = list()
+  alignment_results = list()
   region_index = 1
   for (region_name in region_names) {
     cur_region = regions %>% dplyr::filter(name == region_name)
@@ -574,20 +624,20 @@ deletion_analysis = function(regions,
       next
     }
 
-    delResult = region_del_analysis(region = cur_region, replicates = cur_replicates, opts)
-    delResult$region = cur_region
-    delResult$replicates = cur_replicates
+    alignment_result = region_alignment_analysis(region = cur_region, replicates = cur_replicates, opts)
+    alignment_result$region = cur_region
+    alignment_result$replicates = cur_replicates
 
-    del_results[[region_index]] = delResult
+    alignment_results[[region_index]] = alignment_result
     region_index = region_index + 1
   }
 
-  return( del_results )
+  return( alignment_results )
 }
 
 
-# Runs a GenIE deletion analysis for a single region and its replicates
-region_del_analysis = function(region, replicates, opts) {
+# Runs a GenIE alignment analysis for a single region and its replicates
+region_alignment_analysis = function(region, replicates, opts) {
   opts$region = region
   opts$replicates = replicates
 
@@ -604,17 +654,17 @@ region_del_analysis = function(region, replicates, opts) {
     stop(sprintf("ERROR: region '%s' length (start - end: %d) should be a positive integer.", region$name, region_length))
   }
   if (region$highlight_site < 1 || region$highlight_site > region_length) {
-    stop(sprintf("ERROR: region '%'s highlight_site (%d) should be an integer between 1 and the length of the region.", region$name, region$highlight_site))
+    stop(sprintf("ERROR: region '%s' highlight_site (%d) should be an integer between 1 and the length of the region (%d).", region$name, region$highlight_site, region_length))
   }
   if (region$cut_site < 1 || region$cut_site > region_length) {
-    stop(sprintf("ERROR: region '%'s cut_site (%d) should be an integer between 1 and the length of the region.", region$name, region$cut_site))
+    stop(sprintf("ERROR: region '%s' cut_site (%d) should be an integer between 1 and the length of the region (%d).", region$name, region$cut_site, region_length))
   }
   sites = list(start = region$start,
                end = region$end,
                highlight_site = region$highlight_site,
                cut_site = region$cut_site)
 
-  replicate_del_analyses = list()
+  replicate_aln_analyses = list()
   for (i in 1:nrow(replicates)) {
     bam_file = replicates$bam[i]
     replicate = replicates$replicate[i]
@@ -631,28 +681,28 @@ region_del_analysis = function(region, replicates, opts) {
     }
     aligned_read_data = get_aligned_reads(read_data, ref_sequence, sites$start, sites$end)
 
-    result = replicate_del_analysis(name = region$name,
-                                    replicate = replicate,
-                                    type = type,
-                                    sites = sites,
-                                    hdr_profile = hdr_profile,
-                                    wt_profile = wt_profile,
-                                    ref_sequence = ref_sequence,
-                                    read_data = aligned_read_data,
-                                    opts = opts)
+    result = replicate_alignment_analysis(name = region$name,
+                                          replicate = replicate,
+                                          type = type,
+                                          sites = sites,
+                                          hdr_profile = hdr_profile,
+                                          wt_profile = wt_profile,
+                                          ref_sequence = ref_sequence,
+                                          read_data = aligned_read_data,
+                                          opts = opts)
     result$name = region$name
     result$replicate = replicate
     result$type = type
-    replicate_del_analyses[[i]] = result
+    replicate_aln_analyses[[i]] = result
   }
   # Merge together results from all replicates
-  replicate_counts = bind_rows(lapply(replicate_del_analyses, FUN = function(res) res$counts))
-  replicate.udp.df = bind_rows(lapply(replicate_del_analyses, FUN = function(res) res$udp.df))
+  replicate_counts = bind_rows(lapply(replicate_aln_analyses, FUN = function(res) res$counts))
+  replicate.udp.df = bind_rows(lapply(replicate_aln_analyses, FUN = function(res) res$udp.df))
 
   # Determine which UDPs are shared between cDNA and gDNA
   gDNACounts = replicate.udp.df %>% filter(type == "gDNA") %>% group_by(udp) %>%
     summarise(udpcount_gDNA = sum(num_reads))
-  cDNACounts = replicate.udp.df %>% filter(type == "cDNA") %>% group_by(udp) %>%
+  cDNACounts = replicate.udp.df %>% filter(type != "gDNA") %>% group_by(udp) %>%
     summarise(udpcount_cDNA = sum(num_reads))
   replicate.udp.df = replicate.udp.df %>%
     left_join(gDNACounts, by=c("udp")) %>%
@@ -661,7 +711,7 @@ region_del_analysis = function(region, replicates, opts) {
   replicate.udp.df$udp_sharing = "unclear"
   replicate.udp.df$udp_sharing[replicate.udp.df$udpcount_gDNA >= threshold & replicate.udp.df$udpcount_cDNA >= threshold] = "both"
   replicate.udp.df$udp_sharing[replicate.udp.df$udpcount_gDNA > 0 & is.na(replicate.udp.df$udpcount_cDNA)] = "gDNA only"
-  replicate.udp.df$udp_sharing[replicate.udp.df$udpcount_cDNA > 0 & is.na(replicate.udp.df$udpcount_gDNA)] = "cDNA only"
+  replicate.udp.df$udp_sharing[replicate.udp.df$udpcount_cDNA > 0 & is.na(replicate.udp.df$udpcount_gDNA)] = sprintf("%s only", opts$analysis_type)
 
   stats_res = get_region_del_stats(replicate_counts, replicates)
   stats_res$region_summary$name = region$name
@@ -697,10 +747,10 @@ region_del_analysis = function(region, replicates, opts) {
   site.profiles.df = NULL
   wt_hdr.df = NULL
   if (opts$allele_profile) {
-    replicate_wt_hdr = lapply(replicate_del_analyses, FUN = function(res) res$wt_hdr.df)
+    replicate_wt_hdr = lapply(replicate_aln_analyses, FUN = function(res) res$wt_hdr.df)
     wt_hdr.df = bind_rows(replicate_wt_hdr)
 
-    replicate_site_profiles = lapply(replicate_del_analyses, FUN = function(res) res$site.profiles.df)
+    replicate_site_profiles = lapply(replicate_aln_analyses, FUN = function(res) res$site.profiles.df)
     site.profiles.df = bind_rows(replicate_site_profiles)
     site.profiles.df$replicate = as.character(site.profiles.df$replicate)
     # Combine replicates and add merged counts as a replicate named "all"
@@ -713,9 +763,9 @@ region_del_analysis = function(region, replicates, opts) {
       dplyr::arrange(replicate, type, sites_profile)
   }
 
-  result_list = list(type = "deletion_analysis",
+  result_list = list(type = "alignment_analysis",
                      opts = opts,
-                     replicate_list = replicate_del_analyses,
+                     replicate_list = replicate_aln_analyses,
                      replicate_qc = qc_metrics$replicate_qc,
                      replicate_allele_fractions = qc_metrics$replicate_allele_fractions,
                      replicate_alleles = replicate.udp.df,
@@ -728,7 +778,7 @@ region_del_analysis = function(region, replicates, opts) {
   return(result_list)
 }
 
-replicate_del_analysis = function(name, replicate, type, sites, hdr_profile , wt_profile, ref_sequence, read_data, opts)
+replicate_alignment_analysis = function(name, replicate, type, sites, hdr_profile , wt_profile, ref_sequence, read_data, opts)
 {
   counts = list(name = name, replicate = replicate, type = type)
 
@@ -743,11 +793,11 @@ replicate_del_analysis = function(name, replicate, type, sites, hdr_profile , wt
   replicate_name = paste(name, replicate, type, sep="_")
   reads.df = read_data$alignedReads
 
-  output(opts, sprintf("%d starting cDNA reads\n", sum(reads.df$count)))
-  output(opts, sprintf("%d cDNA reads of %d total (%.1f%%) were soft-clipped\n", read_data$num_softclipped, read_data$num_reads, 100.0 * read_data$num_softclipped / read_data$num_reads))
-  output(opts, sprintf("%d cDNA reads of %d total (%.1f%%) were hard-clipped\n", read_data$num_hardclipped, read_data$num_reads, 100.0 * read_data$num_hardclipped / read_data$num_reads))
-  output(opts, sprintf("%d cDNA reads of %d total (%.1f%%) had insertions\n", read_data$num_insertion, read_data$num_reads, 100.0 * read_data$num_insertion / read_data$num_reads))
-  output(opts, sprintf("%d cDNA reads of %d total (%.1f%%) were likely primer dimers\n", read_data$num_primerdimer, read_data$num_reads, 100.0 * read_data$num_primerdimer / read_data$num_reads))
+  output(opts, sprintf("%d starting reads\n", sum(reads.df$count)))
+  output(opts, sprintf("%d reads of %d total (%.1f%%) were soft-clipped\n", read_data$num_softclipped, read_data$num_reads, 100.0 * read_data$num_softclipped / read_data$num_reads))
+  output(opts, sprintf("%d reads of %d total (%.1f%%) were hard-clipped\n", read_data$num_hardclipped, read_data$num_reads, 100.0 * read_data$num_hardclipped / read_data$num_reads))
+  output(opts, sprintf("%d reads of %d total (%.1f%%) had insertions\n", read_data$num_insertion, read_data$num_reads, 100.0 * read_data$num_insertion / read_data$num_reads))
+  output(opts, sprintf("%d reads of %d total (%.1f%%) were likely primer dimers\n", read_data$num_primerdimer, read_data$num_reads, 100.0 * read_data$num_primerdimer / read_data$num_reads))
   counts$num_softclipped = read_data$num_softclipped
   counts$num_hardclipped = read_data$num_hardclipped
   counts$num_insertion = read_data$num_insertion
@@ -795,6 +845,9 @@ replicate_del_analysis = function(name, replicate, type, sites, hdr_profile , wt
   #reads.df$udp = get_read_udps(reads.df$region_read, wt_profile_chars)
   reads.df$udp = sapply(reads.df$read_chars, FUN=get_read_chars_udp, wt_profile_chars)
   #reads.df$udp = sapply(reads.df$region_read, FUN=get_read_udp, wt_profile_chars) # SLOWER
+
+  # Identify the aligned region for each read (needed for ATAC)
+  reads.df$aligned_region = sapply(reads.df$read_chars, FUN=get_read_chars_aligned_profile, wt_profile_chars)
 
   reads.df$is_wt_allele = (reads.df$udp == wt_profile)
   # make sure we only count as WT those reads which actually cover the HDR site
@@ -956,6 +1009,22 @@ replicate_del_analysis = function(name, replicate, type, sites, hdr_profile , wt
   udp.df$deletion2_end = sapply(udp_dels, FUN=function(x) {if (length(x) == 1) return(NA); if(nrow(x) > 1) {x[2,2]+1} else {NA}})
   #udp.df$deletion_length = sapply(udp_dels, FUN=function(x) x[2]-x[1]+1)
 
+  # Aggregate reads by their aligned region (and relevant sequence differences)
+  aligned.df = summarise(reads.df %>% group_by(aligned_region),
+                         udp = first(udp),
+                         num_reads = sum(count),
+                         is_hdr_allele = first(is_hdr_allele),
+                         is_wt_allele = first(is_wt_allele),
+                         spanning_read = first(spanning_read),
+                         has_any_deletion = first(has_any_deletion),
+                         has_crispr_deletion = first(has_crispr_deletion),
+                         has_multiple_deletions = first(has_multiple_deletions),
+                         avg_seq_length = mean(seq_length),
+                         avg_mismatch_count = mean(mismatch_count)) %>%
+    mutate(name = name, replicate = replicate, type = type) %>%
+    select(name, replicate, type, everything()) %>%
+    arrange(-num_reads)
+
   # Make a table which has just the different versions of the WT and HDR alleles
   wt_hdr.df = NULL
   site.profiles.df = NULL
@@ -985,6 +1054,7 @@ replicate_del_analysis = function(name, replicate, type, sites, hdr_profile , wt
       dplyr::select(name, replicate, type, everything())
   }
   return(list(udp.df = udp.df,
+              aligned.df = aligned.df,
               wt_hdr.df = wt_hdr.df,
               site.profiles.df = site.profiles.df,
               counts = counts))
@@ -1005,7 +1075,7 @@ get_region_del_stats = function(replicate_data, replicates.df) {
   del_ratio_res_window = NULL
   method = ""
   stats.gDNA = replicate_data %>% filter(type == "gDNA")
-  stats.cDNA = replicate_data %>% filter(type == "cDNA")
+  stats.cDNA = replicate_data %>% filter(type != "gDNA")
 
   if (nrow(stats.gDNA) < 2 | nrow(stats.cDNA) < 2) {
     warning("Unable to calculate stats with < 2 replicates")
@@ -1066,7 +1136,7 @@ replicate_qc_metrics = function(replicates, replicate_alleles, max_alleles = 20,
     dplyr::group_by(udp) %>%
     dplyr::summarise(udp_total_reads = sum(num_reads),
                      udp_reads_gDNA = sum(num_reads[type == "gDNA"]),
-                     udp_reads_cDNA = sum(num_reads[type == "cDNA"]),
+                     udp_reads_cDNA = sum(num_reads[type != "gDNA"]),
                      is_wt_allele = first(is_wt_allele)) %>%
     dplyr::arrange(-udp_total_reads)
 
@@ -1123,12 +1193,12 @@ replicate_qc_metrics = function(replicates, replicate_alleles, max_alleles = 20,
 
   # Use multiple metrics across replicates to calculate outlier scores using KNN
   # and isolation forest, separately for cDNA and gDNA
-  n_cDNA = sum(replicates$type == "cDNA")
+  n_cDNA = sum(replicates$type != "gDNA")
   n_gDNA = sum(replicates$type == "gDNA")
   replicate_qc$outlier_score_knn = NA
   if (n_cDNA >= 4 && !any(is.na(replicate_qc$avg_udp_deviation))) {
     stats.cDNA.df = replicate_qc %>%
-      filter(type == "cDNA") %>%
+      filter(type != "gDNA") %>%
       select(num_udps, HDR_WT_ratio, DEL_WT_ratio, avg_udp_deviation, avg_udp_deviation_from_gDNA)
     # Compute KNN outlier metric. First scale the data, and for UDP deviation set low values to
     # zero since these are good and shouldn't be considered outliers.
@@ -1138,7 +1208,7 @@ replicate_qc_metrics = function(replicates, replicate_alleles, max_alleles = 20,
     stats_scaled[, "avg_udp_deviation_from_gDNA"] = sapply(stats_scaled[, "avg_udp_deviation_from_gDNA"], function(x) max(0, x))
     stats_nn <- FNN::get.knn(stats_scaled, k = max(2, floor(n_cDNA / 2)))
     stats_nnd <- rowMeans(stats_nn$nn.dist)
-    replicate_qc$outlier_score_knn[replicate_qc$type == "cDNA"] = stats_nnd
+    replicate_qc$outlier_score_knn[replicate_qc$type != "gDNA"] = stats_nnd
   }
   if (n_gDNA >= 4 && !any(is.na(replicate_qc$avg_udp_deviation))) {
     stats.gDNA.df = replicate_qc %>%
@@ -1160,7 +1230,7 @@ replicate_qc_metrics = function(replicates, replicate_alleles, max_alleles = 20,
 
 get_uns_data = function(replicate.udp.df, replicates.df, region_name) {
   udp_types = unique(replicate.udp.df$type)
-  if (!("cDNA" %in% udp_types & "gDNA" %in% udp_types)) {
+  if (!(("cDNA" %in% udp_types | "ATAC" %in% udp_types) & "gDNA" %in% udp_types)) {
     warning("Cannot compute allele UNS statistics without both cDNA and gDNA replicates")
     return(NULL)
   }
@@ -1191,7 +1261,7 @@ get_uns_data = function(replicate.udp.df, replicates.df, region_name) {
 
   # Results not likely to be stable if the WT count is too low
   all_wt_gDNA_count = sum(replicate.read_counts.df %>% dplyr::filter(type == "gDNA") %>% .$num_wt_reads)
-  all_wt_cDNA_count = sum(replicate.read_counts.df %>% dplyr::filter(type == "cDNA") %>% .$num_wt_reads)
+  all_wt_cDNA_count = sum(replicate.read_counts.df %>% dplyr::filter(type != "gDNA") %>% .$num_wt_reads)
   if (all_wt_gDNA_count < 100) {
     warning(sprintf("%s wild-type gDNA count (%d) is low and may lead to unstable estimates.", region_name, all_wt_gDNA_count))
     if (all_wt_gDNA_count < 1) {
@@ -1215,7 +1285,7 @@ get_uns_data = function(replicate.udp.df, replicates.df, region_name) {
   udp.total_counts.df = replicate.udp.filled.df %>%
     group_by(udp) %>%
     dplyr::summarise(gDNA_total_count = sum(num_reads[type == "gDNA"]),
-                     cDNA_total_count = sum(num_reads[type == "cDNA"]),
+                     cDNA_total_count = sum(num_reads[type != "gDNA"]),
                      total_count = gDNA_total_count + cDNA_total_count)
 
   # Following this, we have a row per replicate per UDP, with counts for cDNA
@@ -1232,10 +1302,10 @@ get_uns_data = function(replicate.udp.df, replicates.df, region_name) {
     summarise(gDNA_total_count = first(gDNA_total_count),
               cDNA_total_count = first(cDNA_total_count),
               total_count = first(total_count),
-              mean_cDNA_count = mean(num_reads[type == "cDNA"], na.rm = TRUE),
+              mean_cDNA_count = mean(num_reads[type != "gDNA"], na.rm = TRUE),
               mean_gDNA_count = mean(num_reads[type == "gDNA"], na.rm = TRUE),
-              cDNA_ratio = mean(num_reads[type == "cDNA"] / num_wt_reads[type == "cDNA"], na.rm = TRUE),
-              sd_cDNA_ratio = sd(num_reads[type == "cDNA"] / num_wt_reads[type == "cDNA"], na.rm = TRUE),
+              cDNA_ratio = mean(num_reads[type != "gDNA"] / num_wt_reads[type != "gDNA"], na.rm = TRUE),
+              sd_cDNA_ratio = sd(num_reads[type != "gDNA"] / num_wt_reads[type != "gDNA"], na.rm = TRUE),
               se_cDNA_ratio = sd_cDNA_ratio / sqrt(n()),
               gDNA_ratio = mean(num_reads[type == "gDNA"] / num_wt_reads[type == "gDNA"], na.rm = TRUE),
               sd_gDNA_ratio = sd(num_reads[type == "gDNA"] / num_wt_reads[type == "gDNA"], na.rm = TRUE),
@@ -1323,30 +1393,30 @@ fit_variance_components = function(replicate.udp.spread.df, replicates.type.df) 
 #' Performs a variance components estimate for each deletion allele based on
 #' the replicate metadata provided.
 #'
-#' @param del_result The result from deletion_analysis
+#' @param alignment_result The result from alignment_analysis
 #' @param replicates A data.frame defining GenIE replicate metadata.
 #' @param allele_min_reads The minimum number of reads that a deletion allele must have across all replicates to be included.
 #' @param allele_min_fraction The minimum fraction of total reads that a deletion allele must have across all replications to be included.
 #' @return Returns a list with tables vp_cDNA and vp_gDNA, which partition variance according to the metadata columns that begin with "replicate_" in the 'replicates' parameter.
 #' @examples
 #' \donttest{
-#' # Note: First run deletion_analysis()
+#' # Note: First run alignment_analysis()
 #' # The below isn't run since it can take 10+ seconds to run
-#' # mul1_del_results is a pre-loaded result
+#' # mul1_alignment_results is a pre-loaded result
 #'
-#' vc = get_variance_components(mul1_del_results[[1]], mul1_replicates)
+#' vc = get_variance_components(mul1_alignment_results[[1]], mul1_replicates)
 #' variance_components_plot(vc)
 #' }
-#' @seealso \code{\link{deletion_analysis}}
+#' @seealso \code{\link{alignment_analysis}}
 #' @seealso \code{\link{variance_components_plot}}
 #' @export
 #'
-get_variance_components = function(del_result, replicates, allele_min_reads = 100, allele_min_fraction = 0.001) {
-  check_is_del_result(del_result)
+get_variance_components = function(alignment_result, replicates, allele_min_reads = 100, allele_min_fraction = 0.001) {
+  check_is_alignment_result(alignment_result)
   # Check that the input replicate information includes all replicates
-  # in the del_result
-  if (!all(del_result$replicates$name %in% replicates$name)) {
-    stop("Not all replicates in the del_result are described in the replicates input dataframe.")
+  # in the alignment_result
+  if (!all(alignment_result$replicates$name %in% replicates$name)) {
+    stop("Not all replicates in the alignment_result are described in the replicates input dataframe.")
   }
   replicate_cols = colnames(replicates)[grepl("^vp_", colnames(replicates))]
   if (length(replicate_cols) < 1) {
@@ -1370,7 +1440,7 @@ get_variance_components = function(del_result, replicates, allele_min_reads = 10
   }
 
   # Subset replicate info dataframe to those replicates in replicate_alleles
-  replicate_alleles = del_result$replicate_alleles
+  replicate_alleles = alignment_result$replicate_alleles
   replicates = replicates %>% dplyr::filter(replicate %in% unique(replicate_alleles$replicate))
 
   filter_udps = function(udp.df, allele_min_reads, allele_min_fraction) {
@@ -1454,11 +1524,11 @@ get_variance_components = function(del_result, replicates, allele_min_reads = 10
   }
   vp_gDNA = as_tibble(bind_rows(dflist))
 
-  opts = list(del_result = del_result,
+  opts = list(alignment_result = alignment_result,
               replicates = replicates,
               allele_min_reads = allele_min_reads,
               allele_min_fraction = allele_min_fraction)
-  return(list(name = del_result$region$name,
+  return(list(name = alignment_result$region$name,
               vp_cDNA = vp_cDNA,
               vp_gDNA = vp_gDNA,
               opts = opts))
@@ -1502,26 +1572,26 @@ get_udp_stats = function(replicate_udps, dna_type, allele_min_reads) {
 
 
 #' Performs estimates of power to detect effects of alleles at different
-#' read fractions, given the variance observed in the del_result replicates.
+#' read fractions, given the variance observed in the alignment_result replicates.
 #'
-#' @param del_result The result from deletion_analysis
+#' @param alignment_result The result from alignment_analysis
 #' @param allele_min_reads The minimum number of reads that a deletion allele must have across all replicates to be included.
 #' @param WT_fraction If specified, then the model will assume this fraction of WT reads
 #' @return Returns...
 #' @examples
-#' # Note: First run deletion_analysis()
-#' # mul1_del_results is a pre-loaded result
+#' # Note: First run alignment_analysis()
+#' # mul1_alignment_results is a pre-loaded result
 #'
-#' pwr = power_analysis(mul1_del_results[[1]])
-#' power_plots(mul1_del_results[[1]])
-#' @seealso \code{\link{deletion_analysis}}
+#' pwr = power_analysis(mul1_alignment_results[[1]])
+#' power_plots(mul1_alignment_results[[1]])
+#' @seealso \code{\link{alignment_analysis}}
 #' @seealso \code{\link{power_plots}}
 #' @export
 #'
-power_analysis = function(del_result, allele_min_reads = 100, WT_fraction = NA) {
+power_analysis = function(alignment_result, allele_min_reads = 100, WT_fraction = NA) {
   opts = list(allele_min_reads = allele_min_reads, WT_fraction = WT_fraction)
-  check_is_del_result(del_result)
-  replicate_alleles = del_result$replicate_alleles
+  check_is_alignment_result(alignment_result)
+  replicate_alleles = alignment_result$replicate_alleles
   # We determine power based on %editing, i.e. the % of all reads represented
   # by a given edit. The %editing can be considered equivalent to mean UDP read
   # count across replicates.
@@ -1539,7 +1609,8 @@ power_analysis = function(del_result, allele_min_reads = 100, WT_fraction = NA) 
     coefs = list()
     # Restrict to UDPs > 0.1% fraction, since noise at very low fractions
     # has a big effect on the fit
-    cDNA_stats = get_udp_stats(replicate_alleles, "cDNA", allele_min_reads) %>%
+    analysis_type = alignment_result$opts$analysis_type
+    cDNA_stats = get_udp_stats(replicate_alleles, analysis_type, allele_min_reads) %>%
       filter(udp_frac_mean > 0.001)
     fit.cDNA <- nls(udp_frac_cv ~ a + b * (1/sqrt(udp_frac_mean)), data = cDNA_stats,
                     weights = sqrt(cDNA_stats$udp_mean), start = list(a = 0.1, b = 0.1))
@@ -1563,8 +1634,8 @@ power_analysis = function(del_result, allele_min_reads = 100, WT_fraction = NA) 
                    coefs = coefs,
                    udp_stats = udp_stats)
 
-  n_cDNA_rep = length(del_result$replicates %>% dplyr::filter(type == "cDNA") %>% .$replicate)
-  n_gDNA_rep = length(del_result$replicates %>% dplyr::filter(type == "gDNA") %>% .$replicate)
+  n_cDNA_rep = length(alignment_result$replicates %>% dplyr::filter(type != "gDNA") %>% .$replicate)
+  n_gDNA_rep = length(alignment_result$replicates %>% dplyr::filter(type == "gDNA") %>% .$replicate)
 
   # The general formula for propagation of uncertainty is (where f = A/B):
   #     sd(f) = f * sqrt( (sd(A) / A)^2 + (sd(B) / B)^2 - 2*cov(A,B) )
@@ -1582,7 +1653,7 @@ power_analysis = function(del_result, allele_min_reads = 100, WT_fraction = NA) 
     power_res$cDNA_WT_CV = fit_UDP_CV(coefs$cDNA, WT_fraction)
     power_res$gDNA_WT_CV = fit_UDP_CV(coefs$gDNA, WT_fraction)
   } else {
-    power_res$cDNA_WT_CV = udp_stats %>% filter(type == "cDNA", is_wt_allele) %>% .$udp_frac_cv
+    power_res$cDNA_WT_CV = udp_stats %>% filter(type != "gDNA", is_wt_allele) %>% .$udp_frac_cv
     power_res$gDNA_WT_CV = udp_stats %>% filter(type == "gDNA", is_wt_allele) %>% .$udp_frac_cv
   }
 
@@ -1677,6 +1748,18 @@ get_read_chars_udp = function(seq_chars, profile_chars = character(0)) {
     seq_chars[seq_chars != '*' & profile_chars == "-"] = "-"
   } else {
     seq_chars[seq_chars != '*'] = "-"
+  }
+  return(str_c(seq_chars, collapse = ""))
+}
+
+get_read_chars_aligned_profile = function(seq_chars, profile_chars = character(0)) {
+  if (length(profile_chars) > 0) {
+    if (length(profile_chars) != length(seq_chars)) {
+      stop(sprintf("Length of sequence to get UDP (%d chars) should be the same as the HDR profile length (%d chars).", length(seq_chars), length(profile_chars)))
+    }
+    seq_chars[seq_chars != '*' & seq_chars != '-' & profile_chars == "-"] = "^" # aligned base
+  } else {
+    seq_chars[seq_chars != '*' & seq_chars != '-'] = "^" # aligned base
   }
   return(str_c(seq_chars, collapse = ""))
 }
@@ -1787,8 +1870,8 @@ udp_ratio_estimate = function(udp.counts.df, replicates.df, numerator = "num_rea
     udp.counts.df = udp.counts.df %>% filter(num_wt_reads != 0)
     warning(sprintf("In udp_ratio_estimate: removing %d replicates with zero WT reads.", numWtZero))
   }
-  udp_ratio_estimate_welch(cDNA_UDP_counts = udp.counts.df$num_reads[udp.counts.df$type == "cDNA"],
-                           cDNA_wt_counts = udp.counts.df$num_wt_reads[udp.counts.df$type == "cDNA"],
+  udp_ratio_estimate_welch(cDNA_UDP_counts = udp.counts.df$num_reads[udp.counts.df$type != "gDNA"],
+                           cDNA_wt_counts = udp.counts.df$num_wt_reads[udp.counts.df$type != "gDNA"],
                            gDNA_UDP_counts = udp.counts.df$num_reads[udp.counts.df$type == "gDNA"],
                            gDNA_wt_counts = udp.counts.df$num_wt_reads[udp.counts.df$type == "gDNA"])
 }
@@ -1864,9 +1947,9 @@ is_empty = function(s) {
   ifelse(is.null(s), TRUE, s == "")
 }
 
-check_is_del_result = function(del_result) {
-  if (!(utils::hasName(del_result, "type") && del_result$type == "deletion_analysis")) {
-    stop("Input del_result object is not of type deletion_analysis. Do you have a list of deletion results? If so you need to pass e.g. del_results[[1]].")
+check_is_alignment_result = function(alignment_result) {
+  if (!(utils::hasName(alignment_result, "type") && alignment_result$type == "alignment_analysis")) {
+    stop("Input alignment_result object is not of type alignment_analysis. Do you have a list of alignment results? If so you need to pass e.g. alignment_results[[1]].")
   }
 }
 
@@ -1883,19 +1966,19 @@ output = function(opts, str) {
 }
 
 
-#' Given results for rgenie grep or deletion analysis of a set of regions,
+#' Given results for rgenie grep or alignment analysis of a set of regions,
 #' merges together tables across regions.
 #'
 #' @param results A list of rgenie results from either grep or deletion analyses.
 #' @return Returns a list containing the same tables as in an individual result,
 #' but concatenated across regions.
 #' @examples
-#' # Note: First run deletion_analysis()
-#' # mul1_del_results is a pre-loaded result
+#' # Note: First run alignment_analysis()
+#' # mul1_alignment_results is a pre-loaded result
 #'
-#' del_tables = bind_results(mul1_del_results)
+#' del_tables = bind_results(mul1_alignment_results)
 #' @seealso \code{\link{grep_analysis}}
-#' @seealso \code{\link{deletion_analysis}}
+#' @seealso \code{\link{alignment_analysis}}
 #' @export
 #'
 bind_results = function(results) {
@@ -1911,7 +1994,7 @@ bind_results = function(results) {
     new_res$region_stats = bind_rows(lapply(results, function(res) res$region_stats))
     return(new_res)
   }
-  if (results[[1]]$type == "deletion_analysis") {
+  if (results[[1]]$type == "alignment_analysis") {
     new_res = list()
     new_res$replicate_qc = bind_rows(lapply(results, function(res) res$replicate_qc))
     new_res$replicate_alleles = bind_rows(lapply(results, function(res) res$replicate_alleles))
@@ -1949,7 +2032,7 @@ bind_results = function(results) {
 #' grep_results = grep_analysis(regions, replicates)
 #' }
 #' @seealso \code{\link{grep_analysis}}
-#' @seealso \code{\link{deletion_analysis}}
+#' @seealso \code{\link{alignment_analysis}}
 #' @export
 #'
 download_example = function(dir, name = "MUL1", overwrite = FALSE, quiet = FALSE) {
