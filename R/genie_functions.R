@@ -353,6 +353,7 @@ region_grep_analysis = function(region, replicates, opts)
   } else {
     hdr_ratio_res = udp_ratio_estimate(counts.df, replicates.df, numerator = "num_hdr_reads", denominator = "num_wt_reads")
     hdr_ratio_res = hdr_ratio_res %>% mutate(name = region$name) %>% select(name, everything())
+    hdr_ratio_res$hdr_rate_gDNA = mean(counts.df$HDR_frac)
   }
 
   return( list(type = "grep_analysis",
