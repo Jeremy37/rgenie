@@ -2,12 +2,17 @@
 % Please edit documentation in R/plots.R
 \name{allele_effect_plot}
 \alias{allele_effect_plot}
-\title{Plots estimated effect sizes and confidence intervals for top alleles from a deletion analysis.}
+\title{Plots estimated effect sizes and confidence intervals for top alleles from a alignment analysis.}
 \usage{
-allele_effect_plot(del_result, viewing_window = 40, max_alleles = 40)
+allele_effect_plot(
+  alignment_result,
+  viewing_window = 40,
+  max_alleles = 40,
+  min_read_count = 10
+)
 }
 \arguments{
-\item{del_result}{Result from a call to deletion_analysis.}
+\item{alignment_result}{Result from a call to alignment_analysis.}
 
 \item{viewing_window}{Window on either size of the CRISPR cut site to show in the plot.}
 
@@ -15,18 +20,18 @@ allele_effect_plot(del_result, viewing_window = 40, max_alleles = 40)
 }
 \value{
 Returns a ggplot object plotting effect sizes and confidence intervals for top alleles
- from a deletion analysis.
+ from a alignment analysis.
 Top alleles are in decreasing order of their total read count in gDNA across replicates.
 }
 \description{
-Plots estimated effect sizes and confidence intervals for top alleles from a deletion analysis.
+Plots estimated effect sizes and confidence intervals for top alleles from a alignment analysis.
 }
 \examples{
-\dontrun{
-del_results = deletion_analysis(regions, replicates)
-allele_effect_plot(del_results)
-}
+# Note: First run alignment_analysis()
+# mul1_alignment_results is a pre-loaded result
+
+allele_effect_plot(mul1_alignment_results[[1]])
 }
 \seealso{
-\code{\link{deletion_analysis}}
+\code{\link{alignment_analysis}}
 }

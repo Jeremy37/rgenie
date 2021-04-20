@@ -15,7 +15,8 @@ genie_plot_options = function() {
   default_opts = list(
     viewing_window = 40,
     outlier_threshold = NA,
-    allele_plot_max_alleles = 40,
+    allele_plot_max_alleles = 30,
+    allele_plot_min_read_count = 50,
     variance_analysis_min_count = 100,
     variance_analysis_min_fraction = 0.001,
     variance_plot_split_by_fraction = FALSE,
@@ -260,7 +261,7 @@ alignment_analysis_plots = function(alignment_result,
                     deletion_profile = deletion_profile_plot(alignment_result, viewing_window = opts$viewing_window),
                     replicate_summary = replicate_summary_plot(alignment_result, outlier_threshold = opts$outlier_threshold),
                     replicate_qc = replicate_qc_plot(alignment_result, outlier_threshold = opts$outlier_threshold),
-                    allele_effect = allele_effect_plot(alignment_result, viewing_window = opts$viewing_window, max_alleles = opts$allele_plot_max_alleles) )
+                    allele_effect = allele_effect_plot(alignment_result, viewing_window = opts$viewing_window, max_alleles = opts$allele_plot_max_alleles, min_read_count = opts$allele_plot_min_read_count) )
 
   if (alignment_result$opts$analysis_type == "ATAC") {
     plot_list = append(plot_list, list(aligned_read_profiles = aligned_read_profile_plots(alignment_result, num_aligned_read_del_profiles = opts$num_aligned_read_del_profiles, viewing_window = opts$viewing_window)), 3)
@@ -579,7 +580,8 @@ replicate_qc_plot = function(alignment_result,
 #'
 allele_effect_plot = function(alignment_result,
                               viewing_window = 40,
-                              max_alleles = 40) {
+                              max_alleles = 40,
+                              min_read_count = 10) {
   check_is_alignment_result(alignment_result)
   if (viewing_window < 1) {
     warning("viewing_window should be a positive integer.")
@@ -599,6 +601,10 @@ allele_effect_plot = function(alignment_result,
     dplyr::filter(!is_wt_allele) %>%
     dplyr::arrange(!is_hdr_allele, desc(total_count))
 
+  # Remove UDPs with invalid UNS values
+  udp.dels.df = udp.dels.df %>%
+    dplyr::filter(is.finite(uns))
+
   numUDPs = nrow(udp.dels.df)
   if (numUDPs < 2) {
     return(egg::ggarrange(text_plot("No UDPs pass the thresholds for min read counts."), top=plot_title, draw = FALSE))
@@ -606,6 +612,9 @@ allele_effect_plot = function(alignment_result,
   if (!is.na(max_alleles) & numUDPs > max_alleles) {
     udp.dels.df = udp.dels.df %>% .[1:max_alleles,]
     numUDPs = max_alleles
+  }
+  if (!is.na(min_read_count)) {
+    udp.dels.df = udp.dels.df %>% filter(is_hdr_allele | gDNA_total_count > min_read_count)
   }
 
   # matrix containing the deletion binary code
@@ -1674,9 +1683,11 @@ select_top_deletions = function(uns.df, num_del_allele_profiles, rel_highlight_s
     # Choose based only on read count
     numLeft = num_del_allele_profiles - sum(dels.df$priority < 1)
     numLeft = min(numLeft, nrow(dels.df))
-    dels.df = dels.df %>%
-      arrange(desc(priority), desc(covers_site), desc(total_count), desc(del_size))
-    dels.df[1:numLeft,]$priority = 0
+    if (numLeft > 0) {
+      dels.df = dels.df %>%
+        arrange(desc(priority), desc(covers_site), desc(total_count), desc(del_size))
+      dels.df[1:numLeft,]$priority = 0
+    }
   }
   return(dels.df %>% filter(priority < 1) %>% arrange(priority))
 }

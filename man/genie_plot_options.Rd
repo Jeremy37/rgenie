@@ -10,12 +10,12 @@ genie_plot_options()
 Returns a list with default options for all rgenie plots, useful in calls to deletion_plots().
 }
 \examples{
-\dontrun{
-del_result = deletion_analysis(regions, replicates)
+# Note: First run alignment_analysis()
+# mul1_alignment_results is a pre-loaded result
+
 opts = genie_plot_options()
-plot_list = deletion_plots(del_result, opts)
-}
+plot_list = deletion_plots(mul1_alignment_results[[1]], opts)
 }
 \seealso{
-\code{\link{deletion_analysis}}
+\code{\link{alignment_analysis}}
 }

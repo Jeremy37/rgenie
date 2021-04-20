@@ -3,12 +3,12 @@
 \name{power_analysis}
 \alias{power_analysis}
 \title{Performs estimates of power to detect effects of alleles at different
-read fractions, given the variance observed in the del_result replicates.}
+read fractions, given the variance observed in the alignment_result replicates.}
 \usage{
-power_analysis(del_result, allele_min_reads = 100, WT_fraction = NA)
+power_analysis(alignment_result, allele_min_reads = 100, WT_fraction = NA)
 }
 \arguments{
-\item{del_result}{The result from deletion_analysis}
+\item{alignment_result}{The result from alignment_analysis}
 
 \item{allele_min_reads}{The minimum number of reads that a deletion allele must have across all replicates to be included.}
 
@@ -19,17 +19,17 @@ Returns...
 }
 \description{
 Performs estimates of power to detect effects of alleles at different
-read fractions, given the variance observed in the del_result replicates.
+read fractions, given the variance observed in the alignment_result replicates.
 }
 \examples{
-\dontrun{
-del_results = deletion_analysis(regions, replicates)
-pwr = power_analysis(del_results[[1]], replicates)
-power_plots(pwr)
-}
+# Note: First run alignment_analysis()
+# mul1_alignment_results is a pre-loaded result
+
+pwr = power_analysis(mul1_alignment_results[[1]])
+power_plots(mul1_alignment_results[[1]])
 }
 \seealso{
-\code{\link{deletion_analysis}}
+\code{\link{alignment_analysis}}
 
 \code{\link{power_plots}}
 }

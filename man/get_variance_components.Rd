@@ -6,14 +6,14 @@
 the replicate metadata provided.}
 \usage{
 get_variance_components(
-  del_result,
+  alignment_result,
   replicates,
   allele_min_reads = 100,
   allele_min_fraction = 0.001
 )
 }
 \arguments{
-\item{del_result}{The result from deletion_analysis}
+\item{alignment_result}{The result from alignment_analysis}
 
 \item{replicates}{A data.frame defining GenIE replicate metadata.}
 
@@ -29,14 +29,17 @@ Performs a variance components estimate for each deletion allele based on
 the replicate metadata provided.
 }
 \examples{
-\dontrun{
-del_results = deletion_analysis(regions, replicates)
-vc = get_variance_components(del_results[[1]], replicates)
+\donttest{
+# Note: First run alignment_analysis()
+# The below isn't run since it can take 10+ seconds to run
+# mul1_alignment_results is a pre-loaded result
+
+vc = get_variance_components(mul1_alignment_results[[1]], mul1_replicates)
 variance_components_plot(vc)
 }
 }
 \seealso{
-\code{\link{deletion_analysis}}
+\code{\link{alignment_analysis}}
 
 \code{\link{variance_components_plot}}
 }

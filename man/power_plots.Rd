@@ -5,10 +5,10 @@
 \title{Returns a set of plots summarising the expected power to detect a significant
 effect given various allele fraction and effect size combinations.}
 \usage{
-power_plots(del_result, allele_min_reads = 100, WT_fraction = NA)
+power_plots(alignment_result, allele_min_reads = 100, WT_fraction = NA)
 }
 \arguments{
-\item{del_result}{Result from a call to deletion_analysis.}
+\item{alignment_result}{Result from a call to alignment_analysis.}
 
 \item{allele_min_reads}{The minimum number of reads that a deletion allele must have across all replicates to be included.}
 
@@ -27,11 +27,11 @@ Returns a set of plots summarising the expected power to detect a significant
 effect given various allele fraction and effect size combinations.
 }
 \examples{
-\dontrun{
-del_results = deletion_analysis(regions, replicates)
-power_plots(del_results)
-}
+# Note: First run alignment_analysis()
+# mul1_alignment_results is a pre-loaded result
+
+power_plots(mul1_alignment_results[[1]])
 }
 \seealso{
-\code{\link{deletion_analysis}}
+\code{\link{alignment_analysis}}
 }

@@ -2,27 +2,27 @@
 % Please edit documentation in R/plots.R
 \name{replicate_qc_plot}
 \alias{replicate_qc_plot}
-\title{Plots quality control metrics for deletion analysis replicates.}
+\title{Plots quality control metrics for alignment analysis replicates.}
 \usage{
-replicate_qc_plot(del_result, outlier_threshold = NA)
+replicate_qc_plot(alignment_result, outlier_threshold = NA)
 }
 \arguments{
-\item{del_result}{Result from a call to deletion_analysis.}
+\item{alignment_result}{Result from a call to alignment_analysis.}
 
 \item{outlier_threshold}{A numeric threshold for the outlier score, above which replicates will be colored differently.}
 }
 \value{
-Returns a ggplot object with quality control metrics for deletion analysis replicates.
+Returns a ggplot object with quality control metrics for alignment analysis replicates.
 }
 \description{
-Plots quality control metrics for deletion analysis replicates.
+Plots quality control metrics for alignment analysis replicates.
 }
 \examples{
-\dontrun{
-del_results = deletion_analysis(regions, replicates)
-replicate_qc_plot(del_results)
-}
+# Note: First run alignment_analysis()
+# mul1_alignment_results is a pre-loaded result
+
+replicate_qc_plot(mul1_alignment_results[[1]])
 }
 \seealso{
-\code{\link{deletion_analysis}}
+\code{\link{alignment_analysis}}
 }

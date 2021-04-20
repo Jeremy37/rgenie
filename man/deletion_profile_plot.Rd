@@ -4,10 +4,10 @@
 \alias{deletion_profile_plot}
 \title{Plots the deletion "pileup" profile separately for each replicate.}
 \usage{
-deletion_profile_plot(del_result, viewing_window = 40)
+deletion_profile_plot(alignment_result, viewing_window = 40)
 }
 \arguments{
-\item{del_result}{Result from a call to deletion_analysis.}
+\item{alignment_result}{Result from a call to alignment_analysis.}
 
 \item{viewing_window}{Window on either size of the CRISPR cut site to show in the plot.}
 }
@@ -18,11 +18,11 @@ Returns a ggplot object.
 Plots the deletion "pileup" profile separately for each replicate.
 }
 \examples{
-\dontrun{
-del_results = deletion_analysis(regions, replicates)
-deletion_profile_plot(del_results)
-}
+# Note: First run alignment_analysis()
+# mul1_alignment_results is a pre-loaded result
+
+deletion_profile_plot(mul1_alignment_results[[1]])
 }
 \seealso{
-\code{\link{deletion_analysis}}
+\code{\link{alignment_analysis}}
 }

@@ -28,8 +28,8 @@ analysis by rgenie.
   wild-type (WT) reads, and an alignment-based analysis, which uses all
   Cas9-generated alleles, including deletions. The analysis is run for a
   given \strong{region}, which must have multiple \strong{replicates} for
-  both cDNA and gDNA. These analyses take as input a data.frame defining the
-  region, and a data.frame defining replicates.
+  both cDNA (or ATAC) and gDNA. These analyses take as input a data.frame
+  defining the region, and a data.frame defining replicates.
 
   The result of an rgenie analysis is a list object with multiple tables,
   which depend on whether a grep or deletion analyses was done. Plotting
@@ -39,5 +39,5 @@ analysis by rgenie.
 \seealso{
 \code{\link{grep_analysis}}
 
-\code{\link{deletion_analysis}}
+\code{\link{alignment_analysis}}
 }

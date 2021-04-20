@@ -4,7 +4,7 @@
 \alias{variance_components_plot}
 \title{Plots variance components estimates for all unique alleles.}
 \usage{
-variance_components_plot(varcomp, split_by_fraction = F)
+variance_components_plot(varcomp, split_by_fraction = FALSE)
 }
 \arguments{
 \item{varcomp}{Result from a call to get_variance_components.}
@@ -18,14 +18,17 @@ Returns a ggplot object.
 Plots variance components estimates for all unique alleles.
 }
 \examples{
-\dontrun{
-del_results = deletion_analysis(regions, replicates)
-vc = get_variance_components(del_result[[1]], replicates)
+\donttest{
+# Note: First run alignment_analysis()
+# The below isn't run since it can take 10+ seconds to run
+
+# mul1_alignment_results is a pre-loaded result
+vc = get_variance_components(mul1_alignment_results[[1]], mul1_replicates)
 variance_components_plot(vc)
 }
 }
 \seealso{
-\code{\link{deletion_analysis}}
+\code{\link{alignment_analysis}}
 
 \code{\link{get_variance_components}}
 }

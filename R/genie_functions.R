@@ -682,12 +682,31 @@ region_alignment_analysis = function(region, replicates, opts) {
     }
     aligned_read_data = get_aligned_reads(read_data, ref_sequence, sites$start, sites$end)
 
+    # Update HDR and WT profiles to include ref bases according to the
+    # required_match parameters.
+    ref_chars = strsplit(ref_sequence, "")[[1]]
+
+    update_profile = function(seq_profile, ref_chars, required_match_left, required_match_right) {
+      profile_chars = strsplit(seq_profile, "")[[1]]
+      profile_pos_defined = profile_chars != "-"
+      char_positions = which(profile_pos_defined)
+      minpos = max(1, min(char_positions) - required_match_left)
+      maxpos = min(length(ref_chars), max(char_positions) + required_match_right)
+      new_profile_chars = ref_chars
+      new_profile_chars[profile_pos_defined] = profile_chars[profile_pos_defined]
+      new_profile_chars[1:minpos] = "-"
+      new_profile_chars[(maxpos+1):length(new_profile_chars)] = "-"
+      paste(new_profile_chars, collapse = "")
+    }
+    match_hdr_profile = update_profile(hdr_profile, ref_chars, opts$required_match_left, opts$required_match_right)
+    match_wt_profile = update_profile(wt_profile, ref_chars, opts$required_match_left, opts$required_match_right)
+
     result = replicate_alignment_analysis(name = region$name,
                                           replicate = replicate,
                                           type = type,
                                           sites = sites,
-                                          hdr_profile = hdr_profile,
-                                          wt_profile = wt_profile,
+                                          hdr_profile = match_hdr_profile,
+                                          wt_profile = match_wt_profile,
                                           ref_sequence = ref_sequence,
                                           read_data = aligned_read_data,
                                           opts = opts)
@@ -715,7 +734,8 @@ region_alignment_analysis = function(region, replicates, opts) {
   replicate.udp.df$udp_sharing[replicate.udp.df$udpcount_cDNA > 0 & is.na(replicate.udp.df$udpcount_gDNA)] = sprintf("%s only", opts$analysis_type)
 
   stats_res = get_region_del_stats(replicate_counts, replicates)
-  stats_res$region_summary$name = region$name
+  # Add name of region as first column
+  stats_res$region_summary = bind_cols(name = region$name, stats_res$region_summary)
 
   qc_metrics = replicate_qc_metrics(stats_res$replicate_stats, replicate.udp.df,
                                     opts$qc_max_alleles, opts$qc_min_avg_allele_fraction, opts$qc_exclude_wt)
@@ -854,6 +874,10 @@ replicate_alignment_analysis = function(name, replicate, type, sites, hdr_profil
   # make sure we only count as WT those reads which actually cover the HDR site
   reads.df$is_wt_allele[!reads.df$spanning_read] = NA
 
+  if (nrow(reads.df) < 1) {
+    stop("ERROR: too few reads to continue.")
+  }
+
   reads.df$has_any_deletion = sapply(reads.df$udp, FUN=function(s) grepl("[*]", s))
   if (!is.na(opts$crispr_del_window)) {
     startPos = max(1, sites$cut_site - opts$crispr_del_window)
@@ -945,6 +969,9 @@ replicate_alignment_analysis = function(name, replicate, type, sites, hdr_profil
               counts$reads_excluded_for_mismatches, counts$num_reads, 100.0 * counts$reads_excluded_for_mismatches / counts$num_reads,
               opts$max_mismatch_frac * 100))
   reads.df = reads.df[!exclude_for_mismatches, ]
+  if (nrow(reads.df) < 1) {
+    stop("ERROR: too few reads to continue.")
+  }
 
   n_wt_reads = sum(reads.df$is_wt_allele * reads.df$count, na.rm = TRUE)
   if (n_wt_reads < 1) {
@@ -961,6 +988,9 @@ replicate_alignment_analysis = function(name, replicate, type, sites, hdr_profil
                 counts$udps_excluded_for_multiple_deletions, counts$num_udps,
                 counts$reads_excluded_for_multiple_deletions, counts$num_reads, 100.0 * counts$reads_excluded_for_multiple_deletions / counts$num_reads))
     reads.df = reads.df[!reads.df$has_multiple_deletions, ]
+    if (nrow(reads.df) < 1) {
+      stop("ERROR: too few reads to continue.")
+    }
   }
 
   counts$num_wt_reads = n_wt_reads
@@ -1991,23 +2021,80 @@ bind_results = function(results) {
   }
   if (results[[1]]$type == "grep_analysis") {
     new_res = list()
+    new_res$type = results[[1]]$type
     new_res$replicate_stats = bind_rows(lapply(results, function(res) res$replicate_stats))
     new_res$region_stats = bind_rows(lapply(results, function(res) res$region_stats))
     return(new_res)
   }
   if (results[[1]]$type == "alignment_analysis") {
     new_res = list()
+    new_res$type = results[[1]]$type
     new_res$replicate_qc = bind_rows(lapply(results, function(res) res$replicate_qc))
     new_res$replicate_alleles = bind_rows(lapply(results, function(res) res$replicate_alleles))
     new_res$region_alleles = bind_rows(lapply(results, function(res) res$region_alleles))
     new_res$allele_effect = bind_rows(lapply(results, function(res) res$allele_effect))
-    new_res$site_profiles = bind_rows(lapply(results, function(res) res$site_profiles))
-    new_res$mismatch_profiles = bind_rows(lapply(results, function(res) res$mismatch_profiles))
     new_res$replicate_stats = bind_rows(lapply(results, function(res) res$replicate_stats))
     new_res$region_stats = bind_rows(lapply(results, function(res) res$region_stats))
+    new_res$site_profiles = bind_rows(lapply(results, function(res) res$site_profiles))
+    new_res$mismatch_profiles = bind_rows(lapply(results, function(res) res$mismatch_profiles))
     return(new_res)
   }
   stop("Unknown results type.")
+}
+
+
+#' Given results for rgenie grep or alignment analysis of a set of regions,
+#' merges together tables across regions.
+#'
+#' @param results A list of rgenie results from either grep or deletion analyses.
+#' @param base_path The root path (including any file prefix) to use for saved files. Output files will have names e.g. <base_path>.region_stats.tsv
+#' @param delim The delimiter to use between columns in saved files.
+#' @param ext The extension for saved files. If not specified (or an empty string) then the extension is inferred from the delimiter as either "tsv", "csv", or "txt".
+#' @return Returns the result of calling bind_results(results).
+#' @examples
+#' # Note: First run alignment_analysis()
+#' # mul1_alignment_results is a pre-loaded result
+#'
+#'  write_results(mul1_alignment_results, "/path/to/mul1_results")
+#' @seealso \code{\link{grep_analysis}}
+#' @seealso \code{\link{alignment_analysis}}
+#' @seealso \code{\link{bind_results}}
+#' @export
+#'
+write_results = function(results, base_path, delim = "\t", ext = "") {
+  if (is.null(results)) {
+    return()
+  }
+  if (length(results) < 1) {
+    return()
+  }
+  res = bind_results(results)
+  if (is.na(ext) || ext == "") {
+    if (delim == "\t") { ext = "tsv" }
+    else if (delim == ",") { ext = "csv" }
+    else { ext = "txt" }
+  }
+  if (res$type == "grep_analysis") {
+    readr::write_delim(res$replicate_stats, path = paste(base_path, "replicate_stats", ext, sep = "."), delim = delim)
+    readr::write_delim(res$region_stats, path = paste(base_path, "region_stats", ext, sep = "."), delim = delim)
+  }
+  else if (results[[1]]$type == "alignment_analysis") {
+    readr::write_delim(res$replicate_qc, path = paste(base_path, "replicate_qc", ext, sep = "."), delim = delim)
+    readr::write_delim(res$replicate_alleles, path = paste(base_path, "replicate_alleles", ext, sep = "."), delim = delim)
+    readr::write_delim(res$region_alleles, path = paste(base_path, "region_alleles", ext, sep = "."), delim = delim)
+    readr::write_delim(res$allele_effect, path = paste(base_path, "allele_effect", ext, sep = "."), delim = delim)
+    readr::write_delim(res$replicate_stats, path = paste(base_path, "replicate_stats", ext, sep = "."), delim = delim)
+    readr::write_delim(res$region_stats, path = paste(base_path, "region_stats", ext, sep = "."), delim = delim)
+    if (nrow(res$site_profiles) > 0) {
+      readr::write_delim(res$site_profiles, path = paste(base_path, "site_profiles", ext, sep = "."), delim = delim)
+    }
+    if (nrow(res$mismatch_profiles) > 0) {
+      readr::write_delim(res$mismatch_profiles, path = paste(base_path, "mismatch_profiles", ext, sep = "."), delim = delim)
+    }
+  }
+  else {
+    warning("Unknown results type.")
+  }
 }
 
 
