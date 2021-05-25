@@ -191,9 +191,10 @@ check_regions_and_replicates = function(regions, replicates) {
 #' # An example is available for download using download_example().
 #'
 #' \donttest{
-#' download_example(dir = "~/genie_example", name = "MUL1")
+#' dl_dir = tempdir()
+#' download_example(dir = dl_dir, name = "MUL1")
 #' # Data are downloaded and we can run an rgenie analysis
-#' setwd("~/genie_example/MUL1/")
+#' setwd(dl_dir)
 #' regions = readr::read_tsv("mul1.genie_regions.tsv")
 #' replicates = readr::read_tsv("mul1.genie_replicates.tsv")
 #' grep_results = grep_analysis(regions, replicates)
@@ -537,9 +538,10 @@ replicate_grep_analysis = function(read_seqs, wt_seq_grep, hdr_grep_set) {
 #' # An example is available for download using download_example().
 #'
 #' \donttest{
-#' download_example(dir = "~/genie_example", name = "MUL1")
+#' dl_dir = tempdir()
+#' download_example(dir = dl_dir, name = "MUL1")
 #' # Data are downloaded and we can run an rgenie analysis
-#' setwd("~/genie_example/MUL1/")
+#' setwd(dl_dir)
 #' regions = readr::read_tsv("mul1.genie_regions.tsv")
 #' replicates = readr::read_tsv("mul1.genie_replicates.tsv")
 #' alignment_results = alignment_analysis(regions, replicates)
@@ -734,8 +736,10 @@ region_alignment_analysis = function(region, replicates, opts) {
   replicate.udp.df$udp_sharing[replicate.udp.df$udpcount_cDNA > 0 & is.na(replicate.udp.df$udpcount_gDNA)] = sprintf("%s only", opts$analysis_type)
 
   stats_res = get_region_del_stats(replicate_counts, replicates)
-  # Add name of region as first column
-  stats_res$region_summary = bind_cols(name = region$name, stats_res$region_summary)
+  if (!is.null(stats_res$region_summary)) {
+    # Add name of region as first column
+    stats_res$region_summary = bind_cols(name = region$name, as_tibble(stats_res$region_summary))
+  }
 
   qc_metrics = replicate_qc_metrics(stats_res$replicate_stats, replicate.udp.df,
                                     opts$qc_max_alleles, opts$qc_min_avg_allele_fraction, opts$qc_exclude_wt)
@@ -1135,7 +1139,7 @@ get_region_del_stats = function(replicate_data, replicates.df) {
   }
 
   result_list = list(replicate_stats = replicate_data,
-                     region_summary = as_tibble(stats.summary))
+                     region_summary = stats.summary)
   return(result_list)
 }
 
@@ -2112,9 +2116,10 @@ write_results = function(results, base_path, delim = "\t", ext = "") {
 #' but concatenated across regions.
 #' @examples
 #' \donttest{
-#' download_example(dir = "~/genie_example", name = "MUL1")
+#' dl_dir = tempdir()
+#' download_example(dir = dl_dir, name = "MUL1")
 #' # Data are downloaded and we can run an rgenie analysis
-#' setwd("~/genie_example/MUL1/")
+#' setwd(dl_dir)
 #' regions = readr::read_tsv("mul1.genie_regions.tsv")
 #' replicates = readr::read_tsv("mul1.genie_replicates.tsv")
 #' grep_results = grep_analysis(regions, replicates)
