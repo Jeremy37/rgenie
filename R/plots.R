@@ -21,6 +21,7 @@ genie_plot_options = function() {
     variance_analysis_min_fraction = 0.001,
     variance_plot_split_by_fraction = FALSE,
     deletion_alleles_plot_color_by = "window",
+    show_aligned_read_profiles = FALSE,
     num_aligned_read_del_profiles = 3,
     plower_plot_min_count = 100,
     plower_plot_WT_fraction = NA)
@@ -263,7 +264,7 @@ alignment_analysis_plots = function(alignment_result,
                     replicate_qc = replicate_qc_plot(alignment_result, outlier_threshold = opts$outlier_threshold),
                     allele_effect = allele_effect_plot(alignment_result, viewing_window = opts$viewing_window, max_alleles = opts$allele_plot_max_alleles, min_read_count = opts$allele_plot_min_read_count) )
 
-  if (alignment_result$opts$analysis_type == "ATAC") {
+  if (alignment_result$opts$analysis_type == "ATAC" & opts$show_aligned_read_profiles) {
     plot_list = append(plot_list, list(aligned_read_profiles = aligned_read_profile_plots(alignment_result, num_aligned_read_del_profiles = opts$num_aligned_read_del_profiles, viewing_window = opts$viewing_window)), 3)
   }
   if (variance_components_plot) {
@@ -342,8 +343,17 @@ alignment_summary_plot = function(alignment_result) {
     summary.left = paste(hdr.rate, del.rate, wt.rate, "", hdr.summary, sep = "\n")
 
     del.conf.interval.str = confIntervalString(alignment_result$region_stats$del_effect_confint_lo, alignment_result$region_stats$del_effect_confint_hi)
-    del.summary = sprintf("%s:gDNA ratio (DEL/WT): %.3g\n%s,    p = %.3g",
-                          analysis_type, alignment_result$region_stats$del_effect, del.conf.interval.str, alignment_result$region_stats$del_pval)
+    del.summary.all = sprintf("%s:gDNA ratio (DEL/WT): %.3g\n%s,    p = %.3g",
+                              analysis_type, alignment_result$region_stats$del_effect, del.conf.interval.str, alignment_result$region_stats$del_pval)
+
+    # Summary for deletion span of interest
+    region_length = alignment_result$region$end - alignment_result$region$start + 1
+    window_start = min(region_length, max(1, alignment_result$region$highlight_site + alignment_result$opts$del_span_start))
+    window_end = min(region_length, max(1, alignment_result$region$highlight_site + alignment_result$opts$del_span_end))
+    del_window.conf.interval.str = confIntervalString(alignment_result$region_stats$del_window_effect_confint_lo, alignment_result$region_stats$del_window_effect_confint_hi)
+    del.summary.window = sprintf("\n%s:gDNA ratio (DEL/WT) [%d-%d]: %.3g\n%s,    p = %.3g",
+                                 analysis_type, window_start, window_end,
+                                 alignment_result$region_stats$del_window_effect, del_window.conf.interval.str, alignment_result$region_stats$del_window_pval)
 
     if (alignment_result$opts$analysis_type == "ATAC") {
       # Summary for individual deletions
@@ -362,18 +372,10 @@ alignment_summary_plot = function(alignment_result) {
                            analysis_type, dels.df$uns[2], del_conf_interval_str, dels.df$pval[2])
       }
       del.summary.2 = paste(del1_str, del2_str, sep = "\n")
+      summary.right = paste(del.summary.window, del.summary.2, sep = "\n")
     } else {
-      # Summary for deletion span of interest
-      region_length = alignment_result$region$end - alignment_result$region$start + 1
-      window_start = min(region_length, max(1, alignment_result$region$highlight_site + alignment_result$opts$del_span_start))
-      window_end = min(region_length, max(1, alignment_result$region$highlight_site + alignment_result$opts$del_span_end))
-      del_window.conf.interval.str = confIntervalString(alignment_result$region_stats$del_window_effect_confint_lo, alignment_result$region_stats$del_window_effect_confint_hi)
-      del.summary.2 = sprintf("\n%s:gDNA ratio (DEL/WT) [%d-%d]: %.3g\n%s,    p = %.3g",
-                              analysis_type, window_start, window_end,
-                              alignment_result$region_stats$del_window_effect, del_window.conf.interval.str, alignment_result$region_stats$del_window_pval)
+      summary.right = paste(del.summary, del.summary.window, sep = "\n")
     }
-
-    summary.right = paste(del.summary, del.summary.2, sep = "\n")
   }
 
   ggThemeBlank = theme_bw() + theme(panel.grid = element_blank(), axis.text = element_blank(), axis.title = element_blank(), axis.ticks = element_blank(), panel.border = element_blank())
@@ -566,9 +568,11 @@ replicate_qc_plot = function(alignment_result,
 #' @param alignment_result Result from a call to alignment_analysis.
 #' @param viewing_window Window on either size of the CRISPR cut site to show in the plot.
 #' @param max_alleles The maximum number of alleles to show in the plot.
+#' @param highlight_top_dels Whether to highlight top deletion alleles in the plot.
 #' @return Returns a ggplot object plotting effect sizes and confidence intervals for top alleles
 #'  from a alignment analysis.
 #' Top alleles are in decreasing order of their total read count in gDNA across replicates.
+#' Selected deletions are
 #'
 #' @examples
 #' # Note: First run alignment_analysis()
@@ -581,7 +585,8 @@ replicate_qc_plot = function(alignment_result,
 allele_effect_plot = function(alignment_result,
                               viewing_window = 40,
                               max_alleles = 40,
-                              min_read_count = 10) {
+                              min_read_count = 10,
+                              highlight_top_dels = TRUE) {
   check_is_alignment_result(alignment_result)
   if (viewing_window < 1) {
     warning("viewing_window should be a positive integer.")
@@ -598,8 +603,7 @@ allele_effect_plot = function(alignment_result,
   plot_title = sprintf("%s effect estimates", alignment_result$region$name)
 
   udp.dels.df = alignment_result$allele_effect %>%
-    dplyr::filter(!is_wt_allele) %>%
-    dplyr::arrange(!is_hdr_allele, desc(total_count))
+    dplyr::filter(!is_wt_allele)
 
   # Remove UDPs with invalid UNS values
   udp.dels.df = udp.dels.df %>%
@@ -609,12 +613,27 @@ allele_effect_plot = function(alignment_result,
   if (numUDPs < 2) {
     return(egg::ggarrange(text_plot("No UDPs pass the thresholds for min read counts."), top=plot_title, draw = FALSE))
   }
-  if (!is.na(max_alleles) & numUDPs > max_alleles) {
-    udp.dels.df = udp.dels.df %>% .[1:max_alleles,]
-    numUDPs = max_alleles
+
+  udp.dels.df$allele = "other"
+  udp.dels.df$allele[udp.dels.df$is_hdr_allele] = "HDR"
+  if (highlight_top_dels) {
+    topdels.df = select_top_deletions(alignment_result$allele_effect, num_del_allele_profiles = 2, rel_highlight_site = alignment_result$region$highlight_site)
+    udp.dels.df$allele[udp.dels.df$udp == topdels.df$udp[1]] = "Del 1"
+    udp.dels.df$allele[udp.dels.df$udp == topdels.df$udp[2]] = "Del 2"
   }
-  if (!is.na(min_read_count)) {
-    udp.dels.df = udp.dels.df %>% filter(is_hdr_allele | gDNA_total_count > min_read_count)
+  udp.dels.df$allele = factor(udp.dels.df$allele, levels = c("HDR", "Del 1", "Del 2", "other"))
+
+  udp.dels.df = udp.dels.df %>%
+    dplyr::arrange(allele != "other", desc(total_count))
+
+  if (is.na(min_read_count)) {
+    min_read_count = 1
+  }
+  if (!is.na(max_alleles) & numUDPs > max_alleles) {
+    udp.dels.df = udp.dels.df %>%
+      filter(allele %in% c("HDR", "Del 1", "Del 2") | gDNA_total_count > min_read_count) %>%
+      filter(allele %in% c("HDR", "Del 1", "Del 2") | row_number() < max_alleles)
+    numUDPs = nrow(udp.dels.df)
   }
 
   # matrix containing the deletion binary code
@@ -634,6 +653,10 @@ allele_effect_plot = function(alignment_result,
   profileSpan = ncol(plot.df)
   plot.df$id = c(1:nrow(plot.df))
   plot.df[,"HDR allele"] = udp.dels.df$is_hdr_allele
+  if (highlight_top_dels) {
+    plot.df[,"Del1"] = udp.dels.df$udp == topdels.df$udp[1]
+    plot.df[,"Del2"] = udp.dels.df$udp == topdels.df$udp[2]
+  }
 
   plot.gather.df = plot.df %>% tidyr::gather(key = "position", value = "udpchar", 1:profileSpan)
   plot.gather.df$pos = as.numeric(plot.gather.df$position)
@@ -662,19 +685,32 @@ allele_effect_plot = function(alignment_result,
     dash_size = 0.8
     dot_size = 0.25
   }
+
+  p.udp = ggplot()
   if (any(plot.gather.df$`HDR allele`)) {
-    p.udp = ggplot() +
+    p.udp = p.udp +
       geom_rect(aes(xmin=min(pos), xmax=max(pos), ymin=(id-0.5), ymax=(id+0.5)), fill = "palegreen", data = plot.gather.df[plot.gather.df$`HDR allele`,]) +
       geom_point(aes(x = pos, y = id), size = dot_size, shape = 19, alpha = 0.7, data = plot.gather.df[plot.gather.df$udpchar == '-' & plot.gather.df$`HDR allele`,]) +
       geom_point(aes(x = pos, y = id), size = dash_size, shape = '-', alpha = 0.8, data = plot.gather.df[plot.gather.df$udpchar == '*' & plot.gather.df$`HDR allele`,])
-  } else {
-    p.udp = ggplot()
   }
+  if (any(plot.gather.df$Del1)) {
+    p.udp = p.udp +
+      geom_rect(aes(xmin=min(pos), xmax=max(pos), ymin=(id-0.5), ymax=(id+0.5)), fill = "lightblue", data = plot.gather.df[plot.gather.df$Del1,]) +
+      geom_point(aes(x = pos, y = id), size = dot_size, shape = 19, alpha = 0.7, data = plot.gather.df[plot.gather.df$udpchar == '-' & plot.gather.df$Del1,]) +
+      geom_point(aes(x = pos, y = id), size = dash_size, shape = '-', alpha = 0.8, data = plot.gather.df[plot.gather.df$udpchar == '*' & plot.gather.df$Del1,])
+  }
+  if (any(plot.gather.df$Del2)) {
+    p.udp = p.udp +
+      geom_rect(aes(xmin=min(pos), xmax=max(pos), ymin=(id-0.5), ymax=(id+0.5)), fill = "orange", data = plot.gather.df[plot.gather.df$Del2,]) +
+      geom_point(aes(x = pos, y = id), size = dot_size, shape = 19, alpha = 0.7, data = plot.gather.df[plot.gather.df$udpchar == '-' & plot.gather.df$Del2,]) +
+      geom_point(aes(x = pos, y = id), size = dash_size, shape = '-', alpha = 0.8, data = plot.gather.df[plot.gather.df$udpchar == '*' & plot.gather.df$Del2,])
+  }
+
   p.udp = p.udp +
     geom_point(aes(x = pos, y = id), size = dot_size, shape = 19, alpha = 0.7, data = plot.gather.df[plot.gather.df$udpchar == '-',]) +
     geom_point(aes(x = pos, y = id), size = dash_size, shape = '-', alpha = 0.8, data = plot.gather.df[plot.gather.df$udpchar == '*',]) +
     scale_color_manual(values = c("grey20", "green4")) +
-    geom_point(aes(x = pos, y = id, shape = udpchar), color = "black", size = 2.5, data = plot.gather.df[!(plot.gather.df$udpchar == '*' | plot.gather.df$udpchar == '-'),]) + scale_shape_identity() +
+    geom_point(aes(x = pos, y = id, shape = udpchar), color = "black", size = 2.3, data = plot.gather.df[!(plot.gather.df$udpchar == '*' | plot.gather.df$udpchar == '-'),]) + scale_shape_identity() +
     coord_cartesian(ylim=c(min(plot.gather.df$id), max(plot.gather.df$id)), xlim=c(view_start, view_end)) +
     xlab("Position") + scale_x_continuous(expand = c(0.01, 0)) +
     theme_bw() + theme(legend.position = "none",
@@ -695,8 +731,10 @@ allele_effect_plot = function(alignment_result,
   uns.plot.df = data.frame(y = ggdendro::label(ddata)$x,
                            x = 0,
                            uns = udp.dels.df$uns,
+                           udp = udp.dels.df$udp,
                            cDNA_lower = udp.dels.df$uns < 1,
                            gDNA = udp.dels.df$gDNA_total_count,
+                           allele = udp.dels.df$allele,
                            uns_conf_hi = udp.dels.df$uns_confint_hi,
                            uns_conf_lo = udp.dels.df$uns_confint_lo) %>%
     rowwise() %>%
@@ -711,7 +749,11 @@ allele_effect_plot = function(alignment_result,
   }
 
   min_uns_threshold = 0.25
-  uns.plot.df$uns = sapply(uns.plot.df$uns, FUN = function(x) max(x, min_uns_threshold))
+  max_uns_threshold = 8
+  if (any(uns.plot.df$uns > max_uns_threshold)) {
+    warning(sprintf("Some alleles have an effect greater than %f. These are truncated at %f.", max_uns_threshold, max_uns_threshold))
+  }
+  uns.plot.df$uns = sapply(uns.plot.df$uns, FUN = function(x) min(max_uns_threshold, max(x, min_uns_threshold)))
   uns.plot.df$uns_conf_lo = sapply(uns.plot.df$uns_conf_lo, FUN = function(x) max(x, 0.01))
   max_uns_display = max(1.5, ceiling(max(uns.plot.df$uns, na.rm = TRUE)))
   min_uns_display = min(uns.plot.df$uns, na.rm = TRUE)
@@ -726,13 +768,16 @@ allele_effect_plot = function(alignment_result,
 
   p.uns = ggplot(uns.plot.df) +
     #annotate("segment", x = uns.plot.df$x, xend = uns.plot.df$uns, y = uns.plot.df$y, yend = uns.plot.df$y, colour = 'gray') +
+    geom_point(aes(x = uns, y = y, colour = allele, shape = allele, size = log10(gDNA), alpha = log10(gDNA))) +
     geom_errorbarh(mapping = aes(y = y, xmin = uns_conf_lo, xmax = uns_conf_hi, height = 0.4),
                    data = uns.plot.df %>% filter(!is.nan(uns_conf_hi), !is.nan(uns_conf_lo)),
-                   colour = "grey70") +
-    geom_point(aes(x = uns, y = y, colour = cDNA_expr, size = log10(gDNA), alpha = log10(gDNA))) +
+                   colour = "grey50", alpha = 0.7) +
+    scale_color_manual(values=c(HDR="limegreen", `Del 1`="royalblue", `Del 2`="orange", other="grey10"), name="Allele") +
+    scale_shape_manual(values=c(HDR=15, `Del 1`=17, `Del 2`=18, other=16), name="Allele") +
+    #    geom_point(aes(x = uns, y = y, colour = cDNA_expr, size = log10(gDNA), alpha = log10(gDNA))) +
+#    scale_color_manual(values=c(higher="red", lower="blue"), name="cDNA expr") +
     scale_size(range = c(1, maxDotSize)) +
-    scale_color_manual(values=c(higher="red", lower="blue"), name="cDNA expr") +
-    scale_alpha_continuous(range = c(0.2, 1)) +
+    scale_alpha_continuous(range = c(0.6, 1)) +
     scale_x_continuous(trans="log2", breaks = c(0.5, 1, 2, 4, 8)) +
     #scale_colour_gradient2(low = "blue", mid = "white", high = "red", midpoint = 1, limits = c(0.1, 4)) +
     #geom_point(data = uns.replicates.plot.df, mapping = aes(y = y, x = uns, size = 2, alpha = 0.6)) +
@@ -741,10 +786,12 @@ allele_effect_plot = function(alignment_result,
                     ylim=c(min(plot.gather.df$id), max(plot.gather.df$id))) +
     ylab("Unique deletion profile") + xlab("Effect") +
     geom_vline(xintercept = 1.0, alpha = 0.25, linetype = "longdash") +
-    theme_bw() + theme(legend.position = "right",
-                       #axis.line = element_blank(),
-                       panel.border = element_blank(),
-                       plot.margin = unit(c(0,0,0.05,0), "cm"))
+    theme_bw() +
+    theme(legend.position = "right",
+          #axis.line = element_blank(),
+          panel.border = element_blank(),
+          plot.margin = unit(c(0,0,0.05,0), "cm")) +
+    guides(color = guide_legend(override.aes = list(size=3.5)))
 
   p.udp_profile = egg::ggarrange(p.dendro, p.udp, p.uns, nrow=1, ncol=3, widths=c(0.6,4,1), top = plot_title, draw = FALSE)
   #p.udp_profile = cowplot::plot_grid(p.uns, p.udp, p.dendro, nrow=1, ncol=3, rel_widths = c(2,4,1))
@@ -1654,7 +1701,7 @@ aligned_read_scaled_profile_plot = function(replicate.aligned_reads.df,
 }
 
 
-select_top_deletions = function(uns.df, num_del_allele_profiles, rel_highlight_site, min_count = 20) {
+select_top_deletions = function(uns.df, num_del_allele_profiles, rel_highlight_site, min_count = 100) {
   dels.df = uns.df %>%
     mutate(del_size = deletion_end - deletion_start,
            covers_site = (rel_highlight_site < deletion_end & rel_highlight_site >= deletion_start),
