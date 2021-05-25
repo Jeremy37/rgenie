@@ -652,11 +652,7 @@ allele_effect_plot = function(alignment_result,
   plot.df = as_tibble(M_chars[model$order,], )
   profileSpan = ncol(plot.df)
   plot.df$id = c(1:nrow(plot.df))
-  plot.df[,"HDR allele"] = udp.dels.df$is_hdr_allele
-  if (highlight_top_dels) {
-    plot.df[,"Del1"] = udp.dels.df$udp == topdels.df$udp[1]
-    plot.df[,"Del2"] = udp.dels.df$udp == topdels.df$udp[2]
-  }
+  plot.df$allele = udp.dels.df$allele
 
   plot.gather.df = plot.df %>% tidyr::gather(key = "position", value = "udpchar", 1:profileSpan)
   plot.gather.df$pos = as.numeric(plot.gather.df$position)
@@ -686,24 +682,27 @@ allele_effect_plot = function(alignment_result,
     dot_size = 0.25
   }
 
+  plot.gather.hdr = plot.gather.df %>% filter(allele == "HDR")
+  plot.gather.del1 = plot.gather.df %>% filter(allele == "Del 1")
+  plot.gather.del2 = plot.gather.df %>% filter(allele == "Del 2")
   p.udp = ggplot()
-  if (any(plot.gather.df$`HDR allele`)) {
+  if (nrow(plot.gather.hdr) > 0) {
     p.udp = p.udp +
-      geom_rect(aes(xmin=min(pos), xmax=max(pos), ymin=(id-0.5), ymax=(id+0.5)), fill = "palegreen", data = plot.gather.df[plot.gather.df$`HDR allele`,]) +
-      geom_point(aes(x = pos, y = id), size = dot_size, shape = 19, alpha = 0.7, data = plot.gather.df[plot.gather.df$udpchar == '-' & plot.gather.df$`HDR allele`,]) +
-      geom_point(aes(x = pos, y = id), size = dash_size, shape = '-', alpha = 0.8, data = plot.gather.df[plot.gather.df$udpchar == '*' & plot.gather.df$`HDR allele`,])
+      geom_rect(aes(xmin=min(pos), xmax=max(pos), ymin=(id-0.5), ymax=(id+0.5)), fill = "palegreen", data = plot.gather.hdr) +
+      geom_point(aes(x = pos, y = id), size = dot_size, shape = 19, alpha = 0.7, data = plot.gather.hdr[plot.gather.hdr$udpchar == '-',]) +
+      geom_point(aes(x = pos, y = id), size = dash_size, shape = '-', alpha = 0.8, data = plot.gather.hdr[plot.gather.hdr$udpchar == '*',])
   }
-  if (any(plot.gather.df$Del1)) {
+  if (nrow(plot.gather.del1) > 0) {
     p.udp = p.udp +
-      geom_rect(aes(xmin=min(pos), xmax=max(pos), ymin=(id-0.5), ymax=(id+0.5)), fill = "lightblue", data = plot.gather.df[plot.gather.df$Del1,]) +
-      geom_point(aes(x = pos, y = id), size = dot_size, shape = 19, alpha = 0.7, data = plot.gather.df[plot.gather.df$udpchar == '-' & plot.gather.df$Del1,]) +
-      geom_point(aes(x = pos, y = id), size = dash_size, shape = '-', alpha = 0.8, data = plot.gather.df[plot.gather.df$udpchar == '*' & plot.gather.df$Del1,])
+      geom_rect(aes(xmin=min(pos), xmax=max(pos), ymin=(id-0.5), ymax=(id+0.5)), fill = "lightblue", data = plot.gather.del1) +
+      geom_point(aes(x = pos, y = id), size = dot_size, shape = 19, alpha = 0.7, data = plot.gather.del1[plot.gather.del1$udpchar == '-',]) +
+      geom_point(aes(x = pos, y = id), size = dash_size, shape = '-', alpha = 0.8, data = plot.gather.del1[plot.gather.del1$udpchar == '*',])
   }
-  if (any(plot.gather.df$Del2)) {
+  if (nrow(plot.gather.del2) > 0) {
     p.udp = p.udp +
-      geom_rect(aes(xmin=min(pos), xmax=max(pos), ymin=(id-0.5), ymax=(id+0.5)), fill = "orange", data = plot.gather.df[plot.gather.df$Del2,]) +
-      geom_point(aes(x = pos, y = id), size = dot_size, shape = 19, alpha = 0.7, data = plot.gather.df[plot.gather.df$udpchar == '-' & plot.gather.df$Del2,]) +
-      geom_point(aes(x = pos, y = id), size = dash_size, shape = '-', alpha = 0.8, data = plot.gather.df[plot.gather.df$udpchar == '*' & plot.gather.df$Del2,])
+      geom_rect(aes(xmin=min(pos), xmax=max(pos), ymin=(id-0.5), ymax=(id+0.5)), fill = "orange", data = plot.gather.del2) +
+      geom_point(aes(x = pos, y = id), size = dot_size, shape = 19, alpha = 0.7, data = plot.gather.del2[plot.gather.del2$udpchar == '-',]) +
+      geom_point(aes(x = pos, y = id), size = dash_size, shape = '-', alpha = 0.8, data = plot.gather.del2[plot.gather.del2$udpchar == '*',])
   }
 
   p.udp = p.udp +
