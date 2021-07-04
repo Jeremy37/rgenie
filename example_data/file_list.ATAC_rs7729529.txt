@@ -1,6 +1,5 @@
 https://raw.githubusercontent.com/Jeremy37/rgenie_example/master/ATAC_rs7729529/rs7729529.genie_regions.tsv
 https://raw.githubusercontent.com/Jeremy37/rgenie_example/master/ATAC_rs7729529/rs7729529.genie_replicates.tsv
-https://raw.githubusercontent.com/Jeremy37/rgenie_example/master/ATAC_rs7729529/rs7729529.genie_replicates.qc_passed.tsv
 https://raw.githubusercontent.com/Jeremy37/rgenie_example/master/ATAC_rs7729529/rs7729529_atac1_pcr1.sortedByCoord.bam
 https://raw.githubusercontent.com/Jeremy37/rgenie_example/master/ATAC_rs7729529/rs7729529_atac1_pcr1.sortedByCoord.bam.bai
 https://raw.githubusercontent.com/Jeremy37/rgenie_example/master/ATAC_rs7729529/rs7729529_atac1_pcr2.sortedByCoord.bam
