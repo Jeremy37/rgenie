@@ -1,0 +1,7 @@
+name	replicate	type	bam
+rs7729529	atac1.1	atac	rs7729529_atac1_pcr1.sortedByCoord.bam
+rs7729529	atac1.2	atac	rs7729529_atac1_pcr2.sortedByCoord.bam
+rs7729529	atac1.3	atac	rs7729529_atac1_pcr3.sortedByCoord.bam
+rs7729529	gDNA1.1	gDNA	rs7729529_gDNA1_pcr1.sortedByCoord.bam
+rs7729529	gDNA1.2	gDNA	rs7729529_gDNA1_pcr2.sortedByCoord.bam
+rs7729529	gDNA1.3	gDNA	rs7729529_gDNA1_pcr3.sortedByCoord.bam
