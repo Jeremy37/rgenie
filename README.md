@@ -40,7 +40,7 @@ This plot shows the set of alleles measured in a set of gDNA and cDNA replicates
 
 ## Getting started
 
-The [rgenie Introduction vignette](https://htmlpreview.github.io/?https://github.com/Jeremy37/rgenie/blob/master/vignettes/introduction.html) shows how to download example data and run an analysis.
+The [rgenie Introduction vignette](https://htmlpreview.github.io/?https://github.com/Jeremy37/rgenie/blob/master/vignettes/introduction.html) shows how to download example data and run an analysis for RNA.
 
 The [rgenie in depth vignette](https://htmlpreview.github.io/?https://github.com/Jeremy37/rgenie/blob/master/vignettes/advanced_rgenie.html) provides more details on the parameters for some methods and how to interpret results.
 
@@ -49,7 +49,7 @@ The [rgenie for ATAC vignette](https://htmlpreview.github.io/?https://github.com
 ## Citation
 
 rgenie for ATAC:
-Sarah E Cooper, Jeremy Schwartzentruber, Eve L Coomber, Andrew R Bassett, [Paper title TBD](), *in preparation*.
+Sarah E Cooper, Jeremy Schwartzentruber, Eve L Coomber, Andrew R Bassett, [Identification of functional regulatory variants in open chromatin using GenIE-ATAC](), *in preparation*.
 
 rgenie:
 Sarah E Cooper, Jeremy Schwartzentruber, Erica Bello, Eve L Coomber, Andrew R Bassett, [Screening for functional transcriptional and splicing regulatory variants with GenIE](https://doi.org/10.1093/nar/gkaa960), *Nucleic Acids Research*, Volume 48, Issue 22, 16 December 2020.

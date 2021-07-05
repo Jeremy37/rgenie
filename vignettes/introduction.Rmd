@@ -60,7 +60,7 @@ for gDNA - about 57 Mb in a total of 24 files (12 ".bam" files and 12
 ".bam.bai" files).
 
 ```{r download_example_x, echo=FALSE, eval=FALSE}
-# Note that the get the vignette to pass CRAN's checks, we can't download data
+# Note that to get the vignette to pass CRAN's checks, we can't download data
 # as part of the vignette. What we have to do is to provide example data that
 # has the results objects already. But we would like to display to the user
 # how to do everything from the downloaded example. To do this, I echo the
@@ -220,7 +220,7 @@ An alignment-based deletion analysis looks at all Cas9-induced deletion alleles,
 
 ```{r, eval=FALSE, echo=TRUE}
 setwd("~/genie_example/MUL1/")
-mul1_del_results = rgenie::deletion_analysis(mul1_regions,
+mul1_del_results = rgenie::alignment_analysis(mul1_regions,
                                              mul1_replicates,
                                              required_match_left = 10,
                                              required_match_right = 10,
@@ -231,8 +231,8 @@ mul1_del_results = rgenie::deletion_analysis(mul1_regions,
                                              exclude_multiple_deletions = FALSE,
                                              exclude_nonspanning_reads = TRUE,
                                              allele_profile = FALSE,
-                                             del_span_start = -20,
-                                             del_span_end = 20,
+                                             del_span_start = -10,
+                                             del_span_end = 10,
                                              quiet = TRUE)
 ```
 
@@ -254,7 +254,7 @@ names(del_result)
 
 The deletion analysis also has many more output tables. We encourage you to explore these outputs yourself, which are described in more detail in the **rgenie in depth** vignette (available online).
 
-The `region_stats` for a deletion_analysis differs from that for a grep_analysis. Although the result is a tidyverse tibble, we show it here in list format so that the results are easier to see.
+The `region_stats` for an alignment_analysis differs from that for a grep_analysis. Although the result is a tidyverse tibble, we show it here in list format so that the results are easier to see.
 
 ```{r}
 tbl = tibble::tibble(Name = names(del_result$region_stats), Value = as.character(del_result$region_stats))
@@ -285,9 +285,11 @@ The best way to explore your GenIE experiment is using the available plots.
 The below plot summarizes the overall statistics for the region, and values for each replicate.
 
 ```{r fig.width=7, fig.height=6}
-rgenie::deletion_summary_plot(del_result)
+rgenie::alignment_summary_plot(del_result)
 del_result$replicate_stats
 ```
+
+The statistics on the right hand side show (at the top) the estimated average effect size of deletions that appear anywhere in the amplicon. The statistics below this on the right hand side show the estimated average effect size of deletions that are strictly within the window indicated. (I.e. deletions that are partly within this window are not included.)
 
 When there are many replicates the data may not fit, in which case you should manually look at the `result$replicate_stats` table.
 
@@ -308,7 +310,7 @@ This plot shows every unique deletion allele, merged across all gDNA replicates 
 
 The viewing_window parameter controls how wide of a region around the `highlight_site` is shown. The position of the highlight site is indicated with a solid vertical line, and the cut site is indicated by a dashed line.
 
-The bottom plot row shows the ***unique alleles***, with a horizontal bar depicting the region deleted. If the `color_by="window"` parameter is specified, then deletions which are contained within a given window (defined in the call to deletion_analysis) are highlighted in red.
+The bottom plot row shows the ***unique alleles***, with a horizontal bar depicting the region deleted. If the `color_by="window"` parameter is specified, then deletions which are contained within a given window (defined by `del_span_start/end` parameters in the call to alignment_analysis) are highlighted in red.
 
 The middle row shows the number of ***unique deletions*** which cover each nucleotide position in the viewing window.
 
@@ -362,18 +364,18 @@ The number of alleles to show is based on the `max_alleles` parameter, and the t
 
 ### All the plots
 
-You may often want to just get all of the available plots for a deletion analysis. You can do this by calling `deletion_plots`.
+You may often want to just get all of the available plots for a deletion analysis. You can do this by calling `alignment_analysis_plots`.
 
 ```{r fig.width=7, fig.height=6}
-all_plots = rgenie::deletion_plots(del_result,
-                                   opts = genie_plot_options(),
-                                   variance_components_plot = FALSE,
-                                   power_plots = FALSE)
+all_plots = rgenie::alignment_analysis_plots(del_result,
+                                             opts = genie_plot_options(),
+                                             variance_components_plot = FALSE,
+                                             power_plots = FALSE)
 
 names(all_plots)
 ```
 
-Note that if you pass in a list of deletion_analysis results for multiple regions, then you will get plots for all of the regions.
+Note that if you pass in a list of alignment_analysis results for multiple regions, then you will get plots for all of the regions.
 
 I won't print all of the plots again here. If you wanted to save all of the plots to a file, you could do something like the following.
 
@@ -394,7 +396,7 @@ print(plot_opts)
 
 The goal of GenIE is usually to screen multiple SNPs for effects on transcription. As such, it is common to perform analyses across many targeted regions.
 
-This is the reason that the `grep_analysis` and `deletion_analysis` functions take in a table of regions and replicates as input. Each returns a list as a result, after conducting the analysis separately for each region. rgenie provides a plot to view a summary of results across many regions.
+This is the reason that the `grep_analysis` and `alignment_analysis` functions take in a table of regions and replicates as input. Each returns a list as a result, after conducting the analysis separately for each region. rgenie provides a plot to view a summary of results across many regions.
 
 ```{r fig.width=7, fig.height=6}
 rgenie::experiment_summary_plot(mul1_grep_results, mul1_del_results)
@@ -430,5 +432,7 @@ If stitching reads with FLASH, the `--allow-outies` parameter is essential, sinc
 
 ## Other documentation
 
-You may also wish to consult the **rgenie in depth** vignette (available online).
+You may also wish to consult the [rgenie in depth vignette](https://htmlpreview.github.io/?https://github.com/Jeremy37/rgenie/blob/genie_atac/vignettes/advanced_rgenie.html) (available online).
+
+For applying GenIE to ATAC data, see the [rgenie for ATAC vignette](https://htmlpreview.github.io/?https://github.com/Jeremy37/rgenie/blob/genie_atac/vignettes/rgenie_atac.html) (available online).
 

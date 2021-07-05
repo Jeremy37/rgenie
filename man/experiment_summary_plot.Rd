@@ -4,12 +4,16 @@
 \alias{experiment_summary_plot}
 \title{Plots a summary of genie results across multiple regions.}
 \usage{
-experiment_summary_plot(grep_results, alignment_results)
+experiment_summary_plot(grep_results, alignment_results, plots_to_show = NULL)
 }
 \arguments{
 \item{grep_results}{Result from a call to grep_analysis (or NULL).}
 
 \item{alignment_results}{Result from a call to alignment_analysis (or NULL).}
+
+\item{plots_to_show}{A character vector listing the plots to show in the summary.
+The default for an RNA experiment is: c("grep_hdr_effect", "aln_hdr_effect", "del_effect", "editing_rates", "hdr_rates").
+For an ATAC experiment, the default is the same except that "del_window_effect" is shown rather than "del_effect".}
 }
 \value{
 Returns a ggplot object.

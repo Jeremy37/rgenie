@@ -567,7 +567,7 @@ alignment_analysis = function(regions,
                              replicates,
                              required_match_left = 10,
                              required_match_right = 10,
-                             crispr_del_window = 100,
+                             crispr_del_window = 50,
                              min_mapq = 0,
                              max_mismatch_frac = 0.05,
                              min_aligned_bases = 50,
@@ -1006,8 +1006,8 @@ replicate_alignment_analysis = function(name, replicate, type, sites, hdr_profil
   window_start = min(region_length, max(1, span_site + opts$del_span_start))
   window_end = min(region_length, max(1, span_site + opts$del_span_end))
   reads.df$has_deletion_in_window = ( grepl("[*]", substr(reads.df$udp, window_start, window_end)) &
-                                     !grepl("[*]", substr(reads.df$udp, 1, window_start)) &
-                                     !grepl("[*]", substr(reads.df$udp, window_end, region_length)) )
+                                     !grepl("[*]", substr(reads.df$udp, 1, window_start-1)) &
+                                     !grepl("[*]", substr(reads.df$udp, window_end+1, region_length)) )
   counts$num_deletion_reads_in_window = sum((reads.df$has_deletion_in_window & !reads.df$is_hdr_allele) * reads.df$count, na.rm = TRUE)
 
   # Aggregate reads according to their UDP
@@ -1099,6 +1099,7 @@ replicate_alignment_analysis = function(name, replicate, type, sites, hdr_profil
 get_region_del_stats = function(replicate_data, replicates.df) {
   replicate_data$HDR_WT_ratio = (replicate_data$num_hdr_reads / replicate_data$num_wt_reads)
   replicate_data$DEL_WT_ratio = (replicate_data$num_deletion_reads / replicate_data$num_wt_reads)
+  replicate_data$DEL_window_WT_ratio = (replicate_data$num_deletion_reads_in_window / replicate_data$num_wt_reads)
   replicate_data$HDR_rate = replicate_data$num_hdr_reads / replicate_data$num_kept_reads
   replicate_data$DEL_rate = replicate_data$num_deletion_reads / replicate_data$num_kept_reads
   replicate_data$editing_rate = replicate_data$num_edit_reads / replicate_data$num_kept_reads
@@ -1278,7 +1279,7 @@ get_uns_data = function(replicate.udp.df, replicates.df, region_name) {
   getReplicate = function(type_rep) { as.character(sapply(type_rep, FUN=function(x) strsplit(x, "^" , fixed=T)[[1]][2])) }
   replicate.udp.filled.df = replicate.udp.df %>%
     dplyr::mutate(type_replicate = paste(type, replicate, sep="^")) %>%
-    dplyr::select(udp, num_reads, is_hdr_allele, is_wt_allele, has_crispr_deletion, deletion_start, deletion_end, type_replicate) %>%
+    dplyr::select(udp, num_reads, is_hdr_allele, is_wt_allele, has_crispr_deletion, has_deletion_in_window, deletion_start, deletion_end, type_replicate) %>%
     tidyr::spread(type_replicate, num_reads, fill = 0) %>%
     tidyr::gather(key="type_replicate", value="num_reads", -(udp:deletion_end)) %>%
     dplyr::mutate(type = getType(type_replicate),
@@ -1348,6 +1349,7 @@ get_uns_data = function(replicate.udp.df, replicates.df, region_name) {
               is_hdr_allele = first(is_hdr_allele),
               is_wt_allele = first(is_wt_allele),
               has_crispr_deletion = first(has_crispr_deletion),
+              has_deletion_in_window = first(has_deletion_in_window),
               deletion_start = first(deletion_start),
               deletion_end = first(deletion_end)) %>%
     dplyr::arrange(!is_wt_allele, !is_hdr_allele, desc(total_count))
@@ -2128,8 +2130,8 @@ write_results = function(results, base_path, delim = "\t", ext = "") {
 #' @seealso \code{\link{alignment_analysis}}
 #' @export
 #'
-download_example = function(dir, name = "MUL1", overwrite = FALSE, quiet = FALSE) {
-  valid_examples = c("MUL1")
+download_example = function(dir, name = "MUL1", overwrite = TRUE, quiet = FALSE) {
+  valid_examples = c("MUL1", "ATAC_rs7729529")
   if (!(name %in% valid_examples)) {
     stop(sprintf("Name %s is not one of the available examples: {%s}", name, paste(valid_examples, collapse = ", ")))
   }
@@ -2139,7 +2141,7 @@ download_example = function(dir, name = "MUL1", overwrite = FALSE, quiet = FALSE
     message(sprintf("Example data for %s is already present. To overwrite it, set overwrite = TRUE.", name))
   } else {
     dir.create(ex_dir, recursive = TRUE, showWarnings = FALSE)
-    fpath = sprintf("https://raw.githubusercontent.com/Jeremy37/rgenie/master/example_data/file_list.%s.txt", name)
+    fpath = sprintf("https://raw.githubusercontent.com/Jeremy37/rgenie/genie_atac/example_data/file_list.%s.txt", name)
     file_list = readr::read_csv(url(fpath), col_names = "path")$path
 
     for (fpath in file_list) {

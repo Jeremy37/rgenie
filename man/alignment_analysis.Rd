@@ -9,7 +9,7 @@ alignment_analysis(
   replicates,
   required_match_left = 10,
   required_match_right = 10,
-  crispr_del_window = 100,
+  crispr_del_window = 50,
   min_mapq = 0,
   max_mismatch_frac = 0.05,
   min_aligned_bases = 50,
@@ -193,9 +193,10 @@ the region input), the extent of which is determined by `crispr_del_window` para
 # An example is available for download using download_example().
 
 \donttest{
-download_example(dir = "~/genie_example", name = "MUL1")
+dl_dir = tempdir()
+download_example(dir = dl_dir, name = "MUL1")
 # Data are downloaded and we can run an rgenie analysis
-setwd("~/genie_example/MUL1/")
+setwd(dl_dir)
 regions = readr::read_tsv("mul1.genie_regions.tsv")
 replicates = readr::read_tsv("mul1.genie_replicates.tsv")
 alignment_results = alignment_analysis(regions, replicates)

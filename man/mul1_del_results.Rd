@@ -3,14 +3,14 @@
 \docType{data}
 \name{mul1_del_results}
 \alias{mul1_del_results}
-\title{GenIE replicates for the MUL1 example.}
+\title{GenIE alignment analysis results for the MUL1 example.}
 \format{
-A one-item list with a deletion_analysis result object.
+A one-item list with a alignment_analysis result object.
 }
 \usage{
 mul1_del_results
 }
 \description{
-A list with a single result object from GenIE deletion analysis for the MUL1 example.
+A list with a single result object from GenIE alignment analysis for the MUL1 example.
 }
 \keyword{datasets}

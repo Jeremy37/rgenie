@@ -127,9 +127,10 @@ The main output of interest is the `region_stats` field, which is a one-row data
 # An example is available for download using download_example().
 
 \donttest{
-download_example(dir = "~/genie_example", name = "MUL1")
+dl_dir = tempdir()
+download_example(dir = dl_dir, name = "MUL1")
 # Data are downloaded and we can run an rgenie analysis
-setwd("~/genie_example/MUL1/")
+setwd(dl_dir)
 regions = readr::read_tsv("mul1.genie_regions.tsv")
 replicates = readr::read_tsv("mul1.genie_replicates.tsv")
 grep_results = grep_analysis(regions, replicates)

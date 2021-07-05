@@ -1,13 +1,13 @@
 
 
-#' Returns a list with default options for all rgenie plots, useful in calls to deletion_plots().
+#' Returns a list with default options for all rgenie plots, useful in calls to alignment_analysis_plots().
 #'
 #' @examples
 #' # Note: First run alignment_analysis()
 #' # mul1_alignment_results is a pre-loaded result
 #'
 #' opts = genie_plot_options()
-#' plot_list = deletion_plots(mul1_alignment_results[[1]], opts)
+#' plot_list = alignment_analysis_plots(mul1_alignment_results[[1]], opts)
 #' @seealso \code{\link{alignment_analysis}}
 #' @export
 #'
@@ -17,6 +17,8 @@ genie_plot_options = function() {
     outlier_threshold = NA,
     allele_plot_max_alleles = 30,
     allele_plot_min_read_count = 50,
+    allele_plot_highlight_top_dels = TRUE,
+    allele_plot_highlight_dels_in_window = TRUE,
     variance_analysis_min_count = 100,
     variance_analysis_min_fraction = 0.001,
     variance_plot_split_by_fraction = FALSE,
@@ -33,6 +35,9 @@ genie_plot_options = function() {
 #'
 #' @param grep_results Result from a call to grep_analysis (or NULL).
 #' @param alignment_results Result from a call to alignment_analysis (or NULL).
+#' @param plots_to_show A character vector listing the plots to show in the summary.
+#' The default for an RNA experiment is: c("grep_hdr_effect", "aln_hdr_effect", "del_effect", "editing_rates", "hdr_rates").
+#' For an ATAC experiment, the default is the same except that "del_window_effect" is shown rather than "del_effect".
 #' @return Returns a ggplot object.
 #'
 #' @examples
@@ -45,7 +50,15 @@ genie_plot_options = function() {
 #' @seealso \code{\link{bind_results}}
 #' @export
 #'
-experiment_summary_plot = function(grep_results, alignment_results) {
+experiment_summary_plot = function(grep_results, alignment_results, plots_to_show = NULL) {
+  if (is.null(plots_to_show)) {
+    plots_to_show = c("grep_hdr_effect", "aln_hdr_effect", "del_effect", "editing_rates", "hdr_rates")
+    if (!is.null(alignment_results)) {
+      if (alignment_results[[1]]$opts$analysis_type == "ATAC") {
+        plots_to_show = c("grep_hdr_effect", "aln_hdr_effect", "del_window_effect", "editing_rates", "hdr_rates")
+      }
+    }
+  }
   getSignificanceStr = function(pval) {
     if (is.na(pval) | pval >= 0.01) { "p >= 0.01" }
     else if (pval < 0.001) { "p < 0.001" }
@@ -54,11 +67,15 @@ experiment_summary_plot = function(grep_results, alignment_results) {
 
   p.grep.effect = NULL
   p.stats.effect = NULL
+  p.stats.del = NULL
+  p.stats.del_window = NULL
+  p.stats.editing = NULL
+  p.stats.hdr = NULL
   effect_size_theme = theme_bw(10) + theme(axis.text.x = element_blank(),
                                            legend.title = element_blank(),
                                            axis.title.x = element_blank(),
                                            plot.margin = unit(c(0.1, 0, 0.1 ,1), "cm"))
-  if (!is.null(grep_results)) {
+  if (!is.null(grep_results) && "grep_hdr_effect" %in% plots_to_show) {
     grep_dfs = bind_results(grep_results)
     exp_names = sapply(grep_dfs$region_stats$name, FUN = function(s) strsplit(s, ",", TRUE)[[1]][1])
     if (any(duplicated(exp_names))) {
@@ -89,60 +106,84 @@ experiment_summary_plot = function(grep_results, alignment_results) {
     del_dfs$region_stats$name = factor(as.character(exp_names), levels=exp_names)
     del_dfs$region_stats$hdr_significance = factor(sapply(del_dfs$region_stats$hdr_pval, FUN = getSignificanceStr), levels=c("p >= 0.01", "p < 0.01", "p < 0.001"))
 
-    p.stats.effect = ggplot(del_dfs$region_stats, aes(x=name, y=hdr_effect, fill=hdr_significance)) +
-      geom_bar(stat = "identity", width=0.5) +
-      geom_errorbar(aes(ymin = hdr_effect_confint_lo, ymax = hdr_effect_confint_hi),
-                    width = 0.2, col = "grey30") +
-      geom_hline(yintercept = 1, col = "red") +
-      effect_size_theme +
-      ylab("HDR effect") + ggtitle("HDR effect size - alignment analysis") +
-      scale_fill_manual(values=c(`p >= 0.01`="grey70", `p < 0.01`="cornflowerblue", `p < 0.001`="red3")) +
-      coord_cartesian(ylim = c(0, max(1, max(del_dfs$region_stats$hdr_effect * 1.05, na.rm = TRUE))))
+    if ("aln_hdr_effect" %in% plots_to_show) {
+      p.stats.effect = ggplot(del_dfs$region_stats, aes(x=name, y=hdr_effect, fill=hdr_significance)) +
+        geom_bar(stat = "identity", width=0.5) +
+        geom_errorbar(aes(ymin = hdr_effect_confint_lo, ymax = hdr_effect_confint_hi),
+                      width = 0.2, col = "grey30") +
+        geom_hline(yintercept = 1, col = "red") +
+        effect_size_theme +
+        ylab("HDR effect") + ggtitle("HDR effect size - alignment analysis") +
+        scale_fill_manual(values=c(`p >= 0.01`="grey70", `p < 0.01`="cornflowerblue", `p < 0.001`="red3")) +
+        coord_cartesian(ylim = c(0, max(1, max(del_dfs$region_stats$hdr_effect * 1.05, na.rm = TRUE))))
+    }
 
-    del_dfs$region_stats$del_significance = factor(sapply(del_dfs$region_stats$del_pval, FUN = getSignificanceStr), levels=c("p >= 0.01", "p < 0.01", "p < 0.001"))
-    p.stats.del = ggplot(del_dfs$region_stats, aes(x=name, y=del_effect, fill=del_significance)) +
-      geom_bar(stat = "identity", width=0.5) +
-      geom_errorbar(aes(ymin = del_effect_confint_lo, ymax = del_effect_confint_hi),
-                    width = 0.2, col = "grey30") +
-      geom_hline(yintercept = 1, col = "red") +
-      effect_size_theme +
-      ylab("Del effect") + ggtitle("Deletion effect size") +
-      scale_fill_manual(values=c(`p >= 0.01`="grey70", `p < 0.01`="cornflowerblue", `p < 0.001`="red3")) +
-      coord_cartesian(ylim = c(0, min(3, max(del_dfs$region_stats$del_effect * 1.2, na.rm = TRUE))))
+    if ("del_effect" %in% plots_to_show) {
+      del_dfs$region_stats$del_significance = factor(sapply(del_dfs$region_stats$del_pval, FUN = getSignificanceStr), levels=c("p >= 0.01", "p < 0.01", "p < 0.001"))
+      p.stats.del = ggplot(del_dfs$region_stats, aes(x=name, y=del_effect, fill=del_significance)) +
+        geom_bar(stat = "identity", width=0.5) +
+        geom_errorbar(aes(ymin = del_effect_confint_lo, ymax = del_effect_confint_hi),
+                      width = 0.2, col = "grey30") +
+        geom_hline(yintercept = 1, col = "red") +
+        effect_size_theme +
+        ylab("Del effect") + ggtitle("Deletion effect size") +
+        scale_fill_manual(values=c(`p >= 0.01`="grey70", `p < 0.01`="cornflowerblue", `p < 0.001`="red3")) +
+        coord_cartesian(ylim = c(0, min(3, max(del_dfs$region_stats$del_effect * 1.2, na.rm = TRUE))))
+    }
 
-    plot.df = del_dfs$region_stats %>% dplyr::select(name, HDR=hdr_rate_gDNA, NHEJ=del_rate_gDNA) %>%
-      tidyr::gather(key = "type", value = "value", -name)
-    plot.df$type = factor(as.character(plot.df$type), levels = c("NHEJ", "HDR"))
-    p.stats.editing = ggplot(plot.df, aes(x=name, y=value*100, fill=type)) +
-      geom_bar(stat = "identity", position = position_stack(), width=0.5) +
-      theme_bw(10) + theme(axis.text.x = element_blank(),
-                           legend.title = element_blank(),
-                           axis.title.x = element_blank(),
-                           plot.margin = unit(c(0.1, 0, 0.1 ,1), "cm")) +
-      ylab("% editing") + ggtitle("Editing rates") +
-      scale_fill_manual(values=c(HDR="darkorange", NHEJ="cornflowerblue"))
+    if ("del_window_effect" %in% plots_to_show) {
+      del_dfs$region_stats$del_window_significance = factor(sapply(del_dfs$region_stats$del_window_pval, FUN = getSignificanceStr), levels=c("p >= 0.01", "p < 0.01", "p < 0.001"))
+      p.stats.del_window = ggplot(del_dfs$region_stats, aes(x=name, y=del_window_effect, fill=del_window_significance)) +
+        geom_bar(stat = "identity", width=0.5) +
+        geom_errorbar(aes(ymin = del_window_effect_confint_lo, ymax = del_window_effect_confint_hi),
+                      width = 0.2, col = "grey30") +
+        geom_hline(yintercept = 1, col = "red") +
+        effect_size_theme +
+        ylab("Del effect") + ggtitle("Deletion effect size (window)") +
+        scale_fill_manual(values=c(`p >= 0.01`="grey70", `p < 0.01`="cornflowerblue", `p < 0.001`="red3")) +
+        coord_cartesian(ylim = c(0, min(3, max(del_dfs$region_stats$del_window_effect * 1.2, na.rm = TRUE))))
+    }
+
+    if ("editing_rates" %in% plots_to_show) {
+      plot.df = del_dfs$region_stats %>% dplyr::select(name, HDR=hdr_rate_gDNA, NHEJ=del_rate_gDNA) %>%
+        tidyr::gather(key = "type", value = "value", -name)
+      plot.df$type = factor(as.character(plot.df$type), levels = c("NHEJ", "HDR"))
+      p.stats.editing = ggplot(plot.df, aes(x=name, y=value*100, fill=type)) +
+        geom_bar(stat = "identity", position = position_stack(), width=0.5) +
+        theme_bw(10) + theme(axis.text.x = element_blank(),
+                             legend.title = element_blank(),
+                             axis.title.x = element_blank(),
+                             plot.margin = unit(c(0.1, 0, 0.1 ,1), "cm")) +
+        ylab("% editing") + ggtitle("Editing rates") +
+        scale_fill_manual(values=c(HDR="darkorange", NHEJ="cornflowerblue"))
+    }
 
     hdr.df = del_dfs$region_stats
   }
 
-  hdr.df$type = "HDR"
-  p.stats.hdr = ggplot(hdr.df, aes(x=name, y=hdr_rate_gDNA * 100, fill=type)) +
-    geom_bar(stat = "identity", position = position_stack(), width=0.5) +
-    theme_bw(10) + theme(axis.text.x = element_text(angle = 37, hjust = 1, size=7),
-                         legend.title = element_blank(),
-                         axis.title.x = element_blank(),
-                         plot.margin = unit(c(0.1, 0, 0.1 ,1), "cm")) +
-    ylab("% HDR") + ggtitle("HDR rates") +
-    scale_fill_manual(values=c(HDR="darkorange", NHEJ="cornflowerblue"))
+  if ("hdr_rates" %in% plots_to_show) {
+    hdr.df$type = "HDR"
+    p.stats.hdr = ggplot(hdr.df, aes(x=name, y=hdr_rate_gDNA * 100, fill=type)) +
+      geom_bar(stat = "identity", position = position_stack(), width=0.5) +
+      theme_bw(10) + theme(axis.text.x = element_text(angle = 37, hjust = 1, size=7),
+                           legend.title = element_blank(),
+                           axis.title.x = element_blank(),
+                           plot.margin = unit(c(0.1, 0, 0.1 ,1), "cm")) +
+      ylab("% HDR") + ggtitle("HDR rates") +
+      scale_fill_manual(values=c(HDR="darkorange", NHEJ="cornflowerblue"))
+  }
 
   p.title = cowplot::ggdraw() + cowplot::draw_label("Experiment summary", fontface='bold')
-  if (!is.null(p.grep.effect) & !is.null(p.stats.effect)) {
-    p.res = egg::ggarrange(p.title, p.grep.effect, p.stats.effect, p.stats.del, p.stats.editing, p.stats.hdr, ncol=1, heights=c(1.2,2.4,2.4,2.4,2.4,2.4), draw = FALSE)
-  } else if (!is.null(p.grep.effect)) {
-    p.res = egg::ggarrange(p.title, p.grep.effect, p.stats.hdr, ncol=1, heights=c(1.2,3,3), draw = FALSE)
-  } else {
-    p.res = egg::ggarrange(p.title, p.stats.effect, p.stats.del, p.stats.editing, p.stats.hdr, ncol=1, heights=c(1.2,3,3,3,3), draw = FALSE)
-  }
+  plotlist = purrr::compact(list(p.title, p.grep.effect, p.stats.effect, p.stats.del, p.stats.del_window, p.stats.editing, p.stats.hdr))
+  plotheights = c(1.2, rep(2.6, length(plotlist) - 1))
+  p.res = egg::ggarrange(plots = plotlist, ncol=1, heights=plotheights, draw = FALSE)
+  # if (!is.null(p.grep.effect) & !is.null(p.stats.effect)) {
+  #   p.res = egg::ggarrange(p.title, p.grep.effect, p.stats.effect, p.stats.del, p.stats.del_window, p.stats.editing, p.stats.hdr, ncol=1, heights=c(1.2,2.4,2.4,2.4,2.4,2.4,2.4), draw = FALSE)
+  # } else if (!is.null(p.grep.effect)) {
+  #   p.res = egg::ggarrange(p.title, p.grep.effect, p.stats.hdr, ncol=1, heights=c(1.2,3,3), draw = FALSE)
+  # } else {
+  #   p.res = egg::ggarrange(p.title, p.stats.effect, p.stats.del, p.stats.del_window, p.stats.editing, p.stats.hdr, ncol=1, heights=c(1.2,3,3,3,3,3), draw = FALSE)
+  # }
   p.res
 }
 
@@ -262,7 +303,9 @@ alignment_analysis_plots = function(alignment_result,
                     deletion_profile = deletion_profile_plot(alignment_result, viewing_window = opts$viewing_window),
                     replicate_summary = replicate_summary_plot(alignment_result, outlier_threshold = opts$outlier_threshold),
                     replicate_qc = replicate_qc_plot(alignment_result, outlier_threshold = opts$outlier_threshold),
-                    allele_effect = allele_effect_plot(alignment_result, viewing_window = opts$viewing_window, max_alleles = opts$allele_plot_max_alleles, min_read_count = opts$allele_plot_min_read_count) )
+                    allele_effect = allele_effect_plot(alignment_result, viewing_window = opts$viewing_window,
+                                                       max_alleles = opts$allele_plot_max_alleles, min_read_count = opts$allele_plot_min_read_count,
+                                                       highlight_top_dels = opts$allele_plot_highlight_top_dels, highlight_dels_in_window = opts$allele_plot_highlight_dels_in_window) )
 
   if (alignment_result$opts$analysis_type == "ATAC" & opts$show_aligned_read_profiles) {
     plot_list = append(plot_list, list(aligned_read_profiles = aligned_read_profile_plots(alignment_result, num_aligned_read_del_profiles = opts$num_aligned_read_del_profiles, viewing_window = opts$viewing_window)), 3)
@@ -374,7 +417,7 @@ alignment_summary_plot = function(alignment_result) {
       del.summary.2 = paste(del1_str, del2_str, sep = "\n")
       summary.right = paste(del.summary.window, del.summary.2, sep = "\n")
     } else {
-      summary.right = paste(del.summary, del.summary.window, sep = "\n")
+      summary.right = paste(del.summary.all, del.summary.window, sep = "\n")
     }
   }
 
@@ -445,13 +488,19 @@ replicate_summary_plot = function(alignment_result,
     ylab("HDR:WT ratio") +
     ggtitle("HDR:WT ratio")
 
-  p4 = ggplot(stats.df, aes(x=replicate, y=DEL_WT_ratio, fill=type2)) +
+  if (alignment_result$opts$analysis_type == "ATAC") {
+    p4 = ggplot(stats.df, aes(x=replicate, y=DEL_window_WT_ratio, fill=type2)) +
+      ggtitle("Deletion:WT ratio (window)")
+  } else {
+    p4 = ggplot(stats.df, aes(x=replicate, y=DEL_WT_ratio, fill=type2)) +
+      ggtitle("Deletion:WT ratio")
+  }
+  p4 = p4 +
     geom_bar(stat = "identity", alpha = 0.8) +
     geom_text(aes(label = sprintf("%.3g", DEL_WT_ratio)), size = 2.4, position = position_stack(vjust = 0.5)) +
     theme_bw(10) + theme(axis.text.x = element_text(angle = 30, hjust = 1), legend.title=element_blank()) +
     scale_fill_manual(values = color_values, guide=F) +
-    ylab("Del:WT ratio") +
-    ggtitle("Deletion:WT ratio")
+    ylab("Del:WT ratio")
 
   p.title = cowplot::ggdraw() + cowplot::draw_label(sprintf("%s replicate summary", alignment_result$region$name), fontface='bold')
   #p.replicate_qc = cowplot::plot_grid(p.udp_fractions, p.udp_avg_deviation, ncol=1)
@@ -569,6 +618,7 @@ replicate_qc_plot = function(alignment_result,
 #' @param viewing_window Window on either size of the CRISPR cut site to show in the plot.
 #' @param max_alleles The maximum number of alleles to show in the plot.
 #' @param highlight_top_dels Whether to highlight top deletion alleles in the plot.
+#' @param highlight_dels_in_window Whether to highlight all deletions that are in the 'deletion window'.
 #' @return Returns a ggplot object plotting effect sizes and confidence intervals for top alleles
 #'  from a alignment analysis.
 #' Top alleles are in decreasing order of their total read count in gDNA across replicates.
@@ -586,7 +636,8 @@ allele_effect_plot = function(alignment_result,
                               viewing_window = 40,
                               max_alleles = 40,
                               min_read_count = 10,
-                              highlight_top_dels = TRUE) {
+                              highlight_top_dels = TRUE,
+                              highlight_dels_in_window = TRUE) {
   check_is_alignment_result(alignment_result)
   if (viewing_window < 1) {
     warning("viewing_window should be a positive integer.")
@@ -653,6 +704,7 @@ allele_effect_plot = function(alignment_result,
   profileSpan = ncol(plot.df)
   plot.df$id = c(1:nrow(plot.df))
   plot.df$allele = udp.dels.df$allele
+  plot.df$has_deletion_in_window = udp.dels.df$has_deletion_in_window
 
   plot.gather.df = plot.df %>% tidyr::gather(key = "position", value = "udpchar", 1:profileSpan)
   plot.gather.df$pos = as.numeric(plot.gather.df$position)
@@ -685,6 +737,7 @@ allele_effect_plot = function(alignment_result,
   plot.gather.hdr = plot.gather.df %>% filter(allele == "HDR")
   plot.gather.del1 = plot.gather.df %>% filter(allele == "Del 1")
   plot.gather.del2 = plot.gather.df %>% filter(allele == "Del 2")
+  plot.gather.del_in_window = plot.gather.df %>% filter(has_deletion_in_window)
   p.udp = ggplot()
   if (nrow(plot.gather.hdr) > 0) {
     p.udp = p.udp +
@@ -703,6 +756,13 @@ allele_effect_plot = function(alignment_result,
       geom_rect(aes(xmin=min(pos), xmax=max(pos), ymin=(id-0.5), ymax=(id+0.5)), fill = "orange", data = plot.gather.del2) +
       geom_point(aes(x = pos, y = id), size = dot_size, shape = 19, alpha = 0.7, data = plot.gather.del2[plot.gather.del2$udpchar == '-',]) +
       geom_point(aes(x = pos, y = id), size = dash_size, shape = '-', alpha = 0.8, data = plot.gather.del2[plot.gather.del2$udpchar == '*',])
+  }
+  if (highlight_dels_in_window && nrow(plot.gather.del_in_window) > 0) {
+    del_span_start = alignment_result$opts$region$highlight_site + alignment_result$opts$del_span_start
+    del_span_end = alignment_result$opts$region$highlight_site + alignment_result$opts$del_span_end
+    p.udp = p.udp +
+      geom_rect(aes(xmin=max(min(pos), del_span_start)-0.5, xmax=min(max(pos), del_span_end)+0.5, ymin=(id-0.5), ymax=(id+0.5)),
+                color = "red", fill=NA, size=0.5, data = plot.gather.del_in_window)
   }
 
   p.udp = p.udp +

@@ -2,19 +2,19 @@
 % Please edit documentation in R/plots.R
 \name{genie_plot_options}
 \alias{genie_plot_options}
-\title{Returns a list with default options for all rgenie plots, useful in calls to deletion_plots().}
+\title{Returns a list with default options for all rgenie plots, useful in calls to alignment_analysis_plots().}
 \usage{
 genie_plot_options()
 }
 \description{
-Returns a list with default options for all rgenie plots, useful in calls to deletion_plots().
+Returns a list with default options for all rgenie plots, useful in calls to alignment_analysis_plots().
 }
 \examples{
 # Note: First run alignment_analysis()
 # mul1_alignment_results is a pre-loaded result
 
 opts = genie_plot_options()
-plot_list = deletion_plots(mul1_alignment_results[[1]], opts)
+plot_list = alignment_analysis_plots(mul1_alignment_results[[1]], opts)
 }
 \seealso{
 \code{\link{alignment_analysis}}
