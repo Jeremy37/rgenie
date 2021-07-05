@@ -2141,7 +2141,7 @@ download_example = function(dir, name = "MUL1", overwrite = TRUE, quiet = FALSE)
     message(sprintf("Example data for %s is already present. To overwrite it, set overwrite = TRUE.", name))
   } else {
     dir.create(ex_dir, recursive = TRUE, showWarnings = FALSE)
-    fpath = sprintf("https://raw.githubusercontent.com/Jeremy37/rgenie/genie_atac/example_data/file_list.%s.txt", name)
+    fpath = sprintf("https://raw.githubusercontent.com/Jeremy37/rgenie/master/example_data/file_list.%s.txt", name)
     file_list = readr::read_csv(url(fpath), col_names = "path")$path
 
     for (fpath in file_list) {
