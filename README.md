@@ -44,7 +44,7 @@ The [rgenie Introduction vignette](https://htmlpreview.github.io/?https://github
 
 The [rgenie in depth vignette](https://htmlpreview.github.io/?https://github.com/Jeremy37/rgenie/blob/master/vignettes/advanced_rgenie.html) provides more details on the parameters for some methods and how to interpret results.
 
-The [rgenie for ATAC vignette](https://htmlpreview.github.io/?https://github.com/Jeremy37/rgenie/blob/master/vignettes/genie_atac.html) shows how to run an analysis for a GenIE-ATAC experiment.
+The [rgenie for ATAC vignette](https://htmlpreview.github.io/?https://github.com/Jeremy37/rgenie/blob/master/vignettes/rgenie_atac.html) shows how to run an analysis for a GenIE-ATAC experiment.
 
 ## Citation
 
