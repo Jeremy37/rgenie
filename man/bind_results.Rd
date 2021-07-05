@@ -2,7 +2,7 @@
 % Please edit documentation in R/genie_functions.R
 \name{bind_results}
 \alias{bind_results}
-\title{Given results for rgenie grep or deletion analysis of a set of regions,
+\title{Given results for rgenie grep or alignment analysis of a set of regions,
 merges together tables across regions.}
 \usage{
 bind_results(results)
@@ -15,17 +15,17 @@ Returns a list containing the same tables as in an individual result,
 but concatenated across regions.
 }
 \description{
-Given results for rgenie grep or deletion analysis of a set of regions,
+Given results for rgenie grep or alignment analysis of a set of regions,
 merges together tables across regions.
 }
 \examples{
-\dontrun{
-del_results = deletion_analysis(regions, replicates)
-del_tables = bind_results(del_results)
-}
+# Note: First run alignment_analysis()
+# mul1_alignment_results is a pre-loaded result
+
+del_tables = bind_results(mul1_alignment_results)
 }
 \seealso{
 \code{\link{grep_analysis}}
 
-\code{\link{deletion_analysis}}
+\code{\link{alignment_analysis}}
 }

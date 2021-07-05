@@ -4,12 +4,16 @@
 \alias{experiment_summary_plot}
 \title{Plots a summary of genie results across multiple regions.}
 \usage{
-experiment_summary_plot(grep_results, del_results)
+experiment_summary_plot(grep_results, alignment_results, plots_to_show = NULL)
 }
 \arguments{
 \item{grep_results}{Result from a call to grep_analysis (or NULL).}
 
-\item{del_results}{Result from a call to deletion_analysis (or NULL).}
+\item{alignment_results}{Result from a call to alignment_analysis (or NULL).}
+
+\item{plots_to_show}{A character vector listing the plots to show in the summary.
+The default for an RNA experiment is: c("grep_hdr_effect", "aln_hdr_effect", "del_effect", "editing_rates", "hdr_rates").
+For an ATAC experiment, the default is the same except that "del_window_effect" is shown rather than "del_effect".}
 }
 \value{
 Returns a ggplot object.
@@ -18,16 +22,15 @@ Returns a ggplot object.
 Plots a summary of genie results across multiple regions.
 }
 \examples{
-\dontrun{
-grep_results = grep_analysis(regions, replicates)
-del_results = deletion_analysis(regions, replicates)
-experiment_summary_plot(grep_results, del_results)
-}
+# Note: First run alignment_analysis() and/or grep_analysis()
+# mul1_alignment_results and mul1_grep_results are pre-loaded
+
+experiment_summary_plot(mul1_grep_results, mul1_alignment_results)
 }
 \seealso{
 \code{\link{grep_analysis}}
 
-\code{\link{deletion_analysis}}
+\code{\link{alignment_analysis}}
 
 \code{\link{bind_results}}
 }

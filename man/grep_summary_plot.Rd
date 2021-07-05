@@ -16,10 +16,10 @@ Returns a ggplot object.
 Plots a summary of genie results from a grep analysis.
 }
 \examples{
-\dontrun{
-grep_results = grep_analysis(regions, replicates)
-grep_summary_plot(grep_results[[1]])
-}
+# Note: First run grep_analysis()
+# mul1_grep_results is a pre-loaded result
+
+grep_summary_plot(mul1_grep_results[[1]])
 }
 \seealso{
 \code{\link{grep_analysis}}

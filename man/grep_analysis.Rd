@@ -32,7 +32,7 @@ analysis.}
 \description{
 For each replicate associated with an input region, \code{grep_analysis}
 searches for alleles matching the HDR or WT sequences, and returns statistics
-that indicate whether the HDR:WT ratio differs in cDNA and gDNA.
+that indicate whether the HDR:WT ratio differs in cDNA (or ATAC) and gDNA.
 }
 \section{Details}{
  For a grep analysis, the regions parameter is a data.frame
@@ -82,11 +82,14 @@ bam_amplicon/MUL1_rs6700034_cDNA_rep1_pcr3.sortedByCoord.bam \cr }
   will be used. \cr
   \strong{replicate} \tab an ID for the replicate, which must
   be unique among replicates for the region. \cr
-  \strong{type} \tab Must have the value "cDNA" or "gDNA", indicating
-  whether a given replicate contains data for cDNA or gDNA. \cr
+  \strong{type} \tab Must have the value "cDNA", "ATAC", or "gDNA", indicating
+  whether a given replicate contains data for cDNA, ATAC, or gDNA. \cr
   \strong{bam} \tab the path (relative to the working directory) to
   a BAM file with sequencing reads for the replicate. \cr
 }
+
+Either cDNA or ATAC replicates should be given, but not both for a single
+region.
 
 Statistics can only be computed if there are at least 2 replicates of each
 type (cDNA and gDNA). Replicates are matched to the region based on the
@@ -120,13 +123,22 @@ The main output of interest is the `region_stats` field, which is a one-row data
 }
 
 \examples{
-\dontrun{
+# Note: to run an analysis you need BAM files from a GenIE experiment.
+# An example is available for download using download_example().
+
+\donttest{
+dl_dir = tempdir()
+download_example(dir = dl_dir, name = "MUL1")
+# Data are downloaded and we can run an rgenie analysis
+setwd(dl_dir)
+regions = readr::read_tsv("mul1.genie_regions.tsv")
+replicates = readr::read_tsv("mul1.genie_replicates.tsv")
 grep_results = grep_analysis(regions, replicates)
 grep_summary_plot(grep_results[[1]])
 }
 }
 \seealso{
-\code{\link{deletion_analysis}}
+\code{\link{alignment_analysis}}
 
 \code{\link{grep_summary_plot}}
 }

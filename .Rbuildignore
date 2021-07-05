@@ -5,3 +5,4 @@
 ^LICENSE\.md$
 ^example_data$
 ^vignettes/advanced_rgenie.Rmd$
+^vignettes/rgenie_atac.Rmd$

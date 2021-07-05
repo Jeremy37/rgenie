@@ -18,6 +18,10 @@ This vignette describes some of the more advanced parameters and functions of th
 
 If you have a question that is not covered here, please contact me at jeremy37 at gmail.com.
 
+```{r download_example_x, echo=FALSE, eval=FALSE}
+# This vignette isn't included in the CRAN package, but only online at github.
+```
+
 ### Setup
 
 ```{r setup, message=FALSE}
@@ -114,11 +118,11 @@ In some cases we may only be interested in small deletions that occur within a w
 
 ```{r, fig.width=7, fig.height=6}
 setwd("~/genie_example/MUL1/")
-del_results = rgenie::deletion_analysis(regions,
-                                        replicates,
-                                        del_span_start = -20,
-                                        del_span_end = 20,
-                                        quiet = TRUE, allele_profile = TRUE)
+del_results = rgenie::alignment_analysis(regions,
+                                         replicates,
+                                         del_span_start = -20,
+                                         del_span_end = 20,
+                                         quiet = TRUE, allele_profile = TRUE)
 rgenie::deletion_alleles_plot(del_results[[1]])
 ```
 
@@ -127,7 +131,7 @@ Deletions that are included in the deletion span are highlighted in red in the d
 The statistics for these deletions are reported in the deletion summary plot, as the second DEL/WT value on the right-hand side, with the relevant range indicated.
 
 ```{r, fig.width=7, fig.height=6}
-rgenie::deletion_summary_plot(del_results[[1]])
+rgenie::alignment_summary_plot(del_results[[1]])
 ```
 
 They are also reported in the `region_stats` result object.
@@ -143,11 +147,11 @@ You can see that when a smaller del_span is used, fewer deletions are included a
 
 ```{r, fig.width=7, fig.height=6}
 setwd("~/genie_example/MUL1/")
-del_results = rgenie::deletion_analysis(regions,
-                                        replicates,
-                                        del_span_start = -10,
-                                        del_span_end = 10,
-                                        quiet = TRUE)
+del_results = rgenie::alignment_analysis(regions,
+                                         replicates,
+                                         del_span_start = -10,
+                                         del_span_end = 10,
+                                         quiet = TRUE)
 rgenie::deletion_alleles_plot(del_results[[1]])
 
 ```

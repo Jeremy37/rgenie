@@ -4,12 +4,7 @@
 \alias{download_example}
 \title{Downloads example data for rgenie.}
 \usage{
-download_example(
-  dir = "~/genie_example",
-  name = "MUL1",
-  overwrite = F,
-  quiet = F
-)
+download_example(dir, name = "MUL1", overwrite = TRUE, quiet = FALSE)
 }
 \arguments{
 \item{dir}{Directory where example data should be put.}
@@ -29,10 +24,11 @@ but concatenated across regions.
 The example data is a set of BAM files for GenIE replicates.
 }
 \examples{
-\dontrun{
-download_example(dir = "~/genie_example", name = "MUL1")
+\donttest{
+dl_dir = tempdir()
+download_example(dir = dl_dir, name = "MUL1")
 # Data are downloaded and we can run an rgenie analysis
-setwd("~/genie_example")
+setwd(dl_dir)
 regions = readr::read_tsv("mul1.genie_regions.tsv")
 replicates = readr::read_tsv("mul1.genie_replicates.tsv")
 grep_results = grep_analysis(regions, replicates)
@@ -41,5 +37,5 @@ grep_results = grep_analysis(regions, replicates)
 \seealso{
 \code{\link{grep_analysis}}
 
-\code{\link{deletion_analysis}}
+\code{\link{alignment_analysis}}
 }

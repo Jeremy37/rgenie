@@ -2,27 +2,27 @@
 % Please edit documentation in R/plots.R
 \name{replicate_summary_plot}
 \alias{replicate_summary_plot}
-\title{Plots a summary of deletion analysis replicates.}
+\title{Plots a summary of alignment analysis replicates.}
 \usage{
-replicate_summary_plot(del_result, outlier_threshold = NA)
+replicate_summary_plot(alignment_result, outlier_threshold = NA)
 }
 \arguments{
-\item{del_result}{Result from a call to deletion_analysis.}
+\item{alignment_result}{Result from a call to alignment_analysis.}
 
 \item{outlier_threshold}{A numeric threshold for the outlier score, above which replicates will be colored differently.}
 }
 \value{
-Returns a ggplot object with a summary of deletion analysis replicates.
+Returns a ggplot object with a summary of alignment analysis replicates.
 }
 \description{
-Plots a summary of deletion analysis replicates.
+Plots a summary of alignment analysis replicates.
 }
 \examples{
-\dontrun{
-del_results = deletion_analysis(regions, replicates)
-replicate_summary_plot(del_results)
-}
+# Note: First run alignment_analysis()
+# mul1_alignment_results is a pre-loaded result
+
+replicate_summary_plot(mul1_alignment_results[[1]])
 }
 \seealso{
-\code{\link{deletion_analysis}}
+\code{\link{alignment_analysis}}
 }

@@ -1,0 +1,126 @@
+---
+title: "rgenie for ATAC"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{rgenie for ATAC}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+*by Jeremy Schwartzentruber*
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+This vignette describes how to run rgenie for ATAC data and interpret the output. The analysis and setup are very similar to what is done for RNA, so it's best to read the Introduction vignette first.
+
+Please send questions to me at jeremy37 at gmail.com.
+
+```{r, echo=FALSE, eval=FALSE}
+# This vignette isn't included in the CRAN package, but only online at github.
+```
+
+### Setup
+
+```{r setup, message=FALSE}
+library(rgenie)
+library(readr, quietly = TRUE) # Not required, but we use it below
+```
+
+First we load an example where we targeted SNP rs7729529 in an ATAC peak, and did 3 ATAC and 3 gDNA PCR replicates.
+
+```{r, message=FALSE}
+download_example(dir = "~/genie_example", name = "ATAC_rs7729529")
+atac_regions = readr::read_tsv("~/genie_example/ATAC_rs7729529/rs7729529.genie_regions.tsv")
+atac_replicates = readr::read_tsv("~/genie_example/ATAC_rs7729529/rs7729529.genie_replicates.tsv")
+head(atac_regions)
+head(atac_replicates)
+```
+The only difference to an RNA analysis is that the `type` column should have the value `atac` for replicates with ATAC data (rather than `cDNA`). You must still have `gDNA` replicates.
+
+
+## Standard grep analysis
+
+An ATAC analysis differs from an RNA/amplicon analysis, because the ATAC reads will end at various points relative to the region-specific primer used. Only reads that cover the position defined by the `highlight_site` value are included, and an additional region of sequence identity is required, determined by the parameters `required_match_left` and `required_match_right`. The larger the region of identity that is required, the more reads will be "lost" because there was a transposase insertion within the "required_match" window. Therefore, it may be optimal to use a smaller (or asymmetric) window for these parameters in an ATAC analysis. Below, we use 6 bp for both left and right as our default window.
+
+```{r grep_analysis}
+setwd("~/genie_example/ATAC_rs7729529/")
+atac_grep_results = grep_analysis(atac_regions,
+                                  atac_replicates,
+                                  required_match_left = 6,
+                                  required_match_right = 6,
+                                  min_mapq = 0,
+                                  quiet = TRUE)
+grep_result = atac_grep_results[[1]]
+```
+
+Here we see that there are some warnings regarding a small number of reads that are classified as both HDR and WT. This can happen in a grep analysis because it is a simple search for a sequence that is defined by the `hdr_allele_profile` and `wt_allele_profile` values in the region specification, along with the `required_match_` parameters. It is less likely to happen in an alignment analysis.
+
+The result shows the sequences that were searched for to match HDR and WT alleles.
+
+```{r}
+grep_result$hdr_seq_grep
+grep_result$wt_seq_grep
+```
+
+The result field `opts` has a value `analysis_type` which indicates that the analysis was for ATAC data.
+
+```{r}
+grep_result$opts$analysis_type  
+```
+
+
+## Alignment analysis
+
+First, we run the alignment analysis.
+
+```{r alignment_analysis, fig.width=7, fig.height=6.5}
+setwd("~/genie_example/ATAC_rs7729529/")
+atac_del_results = rgenie::alignment_analysis(atac_regions,
+                                              atac_replicates,
+                                              del_span_start = -6,
+                                              del_span_end = 6,
+                                              quiet = TRUE,
+                                              allele_profile = TRUE)
+```
+
+Alignment analysis is similar for ATAC and for RNA, and most plots are equivalent. For example, as with RNA, deletions that are included in the deletion window defined by `del_span_start` and `del_span_end` are highlighted in red in the deletion alleles plot.
+
+```{r, fig.width=7, fig.height=6.5}
+rgenie::deletion_alleles_plot(atac_del_results[[1]])
+```
+
+One minor difference appears in the analysis summary plot, where statistics are shown at the right-hand side. An ATAC analysis shows the statistics for two individual deletions, which are automatically selected based on the combination of high read depth, and a small deletion window around the highlight_site.
+
+
+```{r, fig.width=7, fig.height=6.5}
+rgenie::alignment_summary_plot(atac_del_results[[1]])
+```
+
+The statistics for these deletions are reported in the deletion summary plot, as the second and third DEL/WT values on the right-hand side. These two specific deletions can be highlighted in the allele effect plot (labelled 'Del 1' and 'Del 2') when the parameter `highlight_top_dels` is TRUE.
+
+```{r, fig.width=7, fig.height=6}
+rgenie::allele_effect_plot(atac_del_results[[1]], highlight_top_dels = TRUE)
+```
+
+In this example we can also see that some of the deletions have a red box, indicating that these deletions are entirely within the 'deletion window'. Note that the window is not centered on the cut site (which is shown as the vertical dashed line), but rather on the `highlight_site`, which isn't directly indicated in the plot.
+
+
+## All plots
+
+As with an RNA analysis, all plots can be shown by calling `alignment_analysis_plots`.
+
+```{r alignment_analysis_plots, fig.width=7, fig.height=6.5}
+rgenie::alignment_analysis_plots(atac_del_results[[1]])
+```
+
+
+## Recommendations
+
+* Follow the main recommendations for RNA analyses as described in the [Introduction vignette](https://htmlpreview.github.io/?https://github.com/Jeremy37/rgenie/blob/genie_atac/vignettes/introduction.html) (available online) and the [rgenie in depth vignette](https://htmlpreview.github.io/?https://github.com/Jeremy37/rgenie/blob/genie_atac/vignettes/advanced_rgenie.html) (available online).
+* You can look at the read counts for individual deletions in the aligment result object for a region, e.g. `del_results[[1]]$allele_effect`, or in the *.allele_effect.tsv file saved by `rgenie::write_results(del_results)`.
+* It is a good idea to check how robust the results are to different sizes of the deletion window, i.e. the parameters `del_span_start` and `del_span_end` for an alignment analysis.
+* It is a good idea to visualise your aligned reads in a browser, such as IGV, to see the extent to which ATAC reads cover the site of interest. Based on the way the ATAC PCR is done, you expect a large drop-off in reads from your region-specific primer, but you should assess how the decline in aligned reads interacts with your deletion window and required_match_left/right parameters around the SNP of interest.

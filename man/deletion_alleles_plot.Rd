@@ -4,10 +4,14 @@
 \alias{deletion_alleles_plot}
 \title{Plots unique deletion alleles and their "pileup" count profile separately for cDNA and gDNA.}
 \usage{
-deletion_alleles_plot(del_result, viewing_window = 40, color_by = "window")
+deletion_alleles_plot(
+  alignment_result,
+  viewing_window = 40,
+  color_by = "window"
+)
 }
 \arguments{
-\item{del_result}{Result from a call to deletion_analysis.}
+\item{alignment_result}{Result from a call to alignment_analysis.}
 
 \item{viewing_window}{Window on either size of the CRISPR cut site to show in the plot.}
 
@@ -20,11 +24,11 @@ Returns a ggplot object.
 Plots unique deletion alleles and their "pileup" count profile separately for cDNA and gDNA.
 }
 \examples{
-\dontrun{
-del_results = deletion_analysis(regions, replicates)
-deletion_alleles_plot(del_results)
-}
+# Note: First run alignment_analysis()
+# mul1_alignment_results is a pre-loaded result
+
+deletion_alleles_plot(mul1_alignment_results[[1]])
 }
 \seealso{
-\code{\link{deletion_analysis}}
+\code{\link{alignment_analysis}}
 }
