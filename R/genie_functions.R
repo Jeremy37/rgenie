@@ -1304,10 +1304,6 @@ get_uns_data = function(replicate.udp.df, replicates.df, region_name) {
       warning(sprintf("%s wild-type gDNA count is zero!", region_name))
       return(NULL)
     }
-    if (all_wt_gDNA_count < min_gDNA_count) {
-      warning(sprintf("%s wild-type gDNA count (%d) is below minimum (%d).", region_name, all_wt_gDNA_count, min_gDNA_count))
-      return(NULL)
-    }
   }
   if (all_wt_cDNA_count < 100) {
     warning(sprintf("%s wild-type cDNA count (%d) is low and may lead to unstable estimates.", region_name, all_wt_cDNA_count))

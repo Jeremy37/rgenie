@@ -1516,7 +1516,7 @@ power_plots = function(alignment_result,
 #' # Note: First run alignment_analysis()
 #' # ctcf_alignment_results is a pre-loaded result
 #'
-#' aligned_read_profile_plots(ctcf_alignment_results[[1]])
+#' #aligned_read_profile_plots(ctcf_alignment_results[[1]])
 #' @seealso \code{\link{alignment_analysis}}
 #' @export
 #'
