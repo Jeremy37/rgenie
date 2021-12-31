@@ -506,7 +506,7 @@ replicate_grep_analysis = function(read_seqs, wt_seq_grep, hdr_grep_set) {
 #'
 #' @section Additional fields: The alignment_analysis result object additionally has the following fields:
 #' \tabular{rl}{
-#'   \strong{replicate_qc} \tab A data.frame of summary information for each replicate,
+#'   \strong{replicate_stats} \tab A data.frame of summary information for each replicate,
 #'   with counts of reads in different categories, editing rates per replicate, and
 #'   quality control summary information. \cr
 #'   \strong{replicate_alleles} \tab A data.frame of summary information for each unique
@@ -791,7 +791,6 @@ region_alignment_analysis = function(region, replicates, opts) {
   result_list = list(type = "alignment_analysis",
                      opts = opts,
                      replicate_list = replicate_aln_analyses,
-                     replicate_qc = qc_metrics$replicate_qc,
                      replicate_allele_fractions = qc_metrics$replicate_allele_fractions,
                      replicate_alleles = replicate.udp.df,
                      region_alleles = merged.udp.df,
@@ -2031,7 +2030,6 @@ bind_results = function(results) {
   if (results[[1]]$type == "alignment_analysis") {
     new_res = list()
     new_res$type = results[[1]]$type
-    new_res$replicate_qc = bind_rows(lapply(results, function(res) res$replicate_qc))
     new_res$replicate_alleles = bind_rows(lapply(results, function(res) res$replicate_alleles))
     new_res$region_alleles = bind_rows(lapply(results, function(res) res$region_alleles))
     new_res$allele_effect = bind_rows(lapply(results, function(res) res$allele_effect))
@@ -2081,7 +2079,6 @@ write_results = function(results, base_path, delim = "\t", ext = "") {
     readr::write_delim(res$region_stats, path = paste(base_path, "region_stats", ext, sep = "."), delim = delim)
   }
   else if (results[[1]]$type == "alignment_analysis") {
-    readr::write_delim(res$replicate_qc, path = paste(base_path, "replicate_qc", ext, sep = "."), delim = delim)
     readr::write_delim(res$replicate_alleles, path = paste(base_path, "replicate_alleles", ext, sep = "."), delim = delim)
     readr::write_delim(res$region_alleles, path = paste(base_path, "region_alleles", ext, sep = "."), delim = delim)
     readr::write_delim(res$allele_effect, path = paste(base_path, "allele_effect", ext, sep = "."), delim = delim)
