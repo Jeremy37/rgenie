@@ -5,16 +5,13 @@ experimental replicates. It can be used with either ATAC or RNA GenIE experiment
 
 ## Installation
 
-rgenie is available on CRAN.
-```
-install.packages("rgenie")
-```
-
-If want the latest development version, first install devtools, and then install rgenie using devtools:
+First install devtools, and then install rgenie using devtools:
 ```
 install.packages("devtools")
 devtools::install_github("jeremy37/rgenie")
 ```
+
+(rgenie used to be available on CRAN but was removed for administrative reasons, and I haven't managed to update it yet.)
 
 ## Overview
 
